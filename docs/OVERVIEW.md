@@ -1,4 +1,4 @@
-# cap — overview
+# gsm_cap — overview
 
 A **CAMEL Application Part (CAP)** operation codec (3GPP TS 29.078). It provides
 the argument/result types for the gsmSSF ↔ gsmSCF operations and their operation

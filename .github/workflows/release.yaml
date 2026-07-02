@@ -58,8 +58,8 @@ jobs:
         # the -A header is mandatory (a bare curl would 403 and look "unpublished").
         run: |
           ver="${GITHUB_REF_NAME#v}"
-          ua="cap-release-ci (github.com/Real-Time-Telecom-B-V/cap)"
-          if curl -sf -A "$ua" "https://crates.io/api/v1/crates/cap/${ver}" -o /dev/null; then
+          ua="gsm_cap-release-ci (github.com/Real-Time-Telecom-B-V/gsm_cap)"
+          if curl -sf -A "$ua" "https://crates.io/api/v1/crates/gsm_cap/${ver}" -o /dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "::notice::cap ${ver} already on crates.io — skipping publish."
           else
@@ -86,14 +86,14 @@ jobs:
         run: cargo install cargo-sbom
       - name: Generate SPDX + CycloneDX SBOMs
         run: |
-          cargo sbom --output-format spdx_json_2_3 > "cap-${GITHUB_REF_NAME}.spdx.json"
-          cargo sbom --output-format cyclone_dx_json_1_4 > "cap-${GITHUB_REF_NAME}.cdx.json"
+          cargo sbom --output-format spdx_json_2_3 > "gsm_cap-${GITHUB_REF_NAME}.spdx.json"
+          cargo sbom --output-format cyclone_dx_json_1_4 > "gsm_cap-${GITHUB_REF_NAME}.cdx.json"
       - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: |
-            cap-*.spdx.json
-            cap-*.cdx.json
+            gsm_cap-*.spdx.json
+            gsm_cap-*.cdx.json
 
   github-release:
     needs: [crates-io, sbom]

@@ -12,17 +12,18 @@
 //! context, transaction IDs) is the TCAP layer's job.
 //!
 //! ```
-//! use cap::operations::ReleaseCallArg;
+//! use gsm_cap::operations::ReleaseCallArg;
 //!
 //! // gsmSCF → gsmSSF: release the call with a Q.850 cause (synthetic bytes).
 //! let rel = ReleaseCallArg { cause: vec![0x90, 0x03].into() };
-//! let ber = cap::encode(&rel).unwrap();
-//! let back: ReleaseCallArg = cap::decode(&ber).unwrap();
+//! let ber = gsm_cap::encode(&rel).unwrap();
+//! let back: ReleaseCallArg = gsm_cap::decode(&ber).unwrap();
 //! assert_eq!(rel, back);
 //! ```
 //!
 //! (See [`operations`] for the full set and [`op_codes`] for the codes.)
 
+pub mod application_context;
 pub mod error;
 pub mod op_codes;
 pub mod operations;

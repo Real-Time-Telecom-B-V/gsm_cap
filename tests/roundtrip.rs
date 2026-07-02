@@ -3,16 +3,16 @@
 
 use rasn::types::Integer;
 
-use cap::op_codes;
-use cap::operations::{
+use gsm_cap::op_codes;
+use gsm_cap::operations::{
     ApplyChargingArg, ConnectArg, EventReportBcsmArg, InitialDpArg, InitialDpSmsArg,
     ReleaseCallArg, RequestReportBcsmEventArg,
 };
-use cap::types::{BcsmEvent, EventTypeBcsm, EventTypeSms, MonitorMode};
+use gsm_cap::types::{BcsmEvent, EventTypeBcsm, EventTypeSms, MonitorMode};
 
 fn round_trip<T: rasn::Decode + rasn::Encode + std::fmt::Debug + PartialEq>(v: &T) {
-    let ber = cap::encode(v).expect("encode");
-    let back: T = cap::decode(&ber).expect("decode");
+    let ber = gsm_cap::encode(v).expect("encode");
+    let back: T = gsm_cap::decode(&ber).expect("decode");
     assert_eq!(v, &back);
 }
 
