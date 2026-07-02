@@ -1,0 +1,36 @@
+# Maturin build config for the `gsm_cap` wheel. The version is single-sourced from
+# Cargo.toml (`dynamic = ["version"]`), so PyPI and crates.io always ship the same
+# number. `extension-module` is the ONLY place that feature is enabled — never by
+# `cargo test`/`cargo clippy` (it un-links libpython and breaks Rust test binaries).
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "gsm_cap"
+description = "Rust-backed CAMEL Application Part (CAP) operation codec (3GPP TS 29.078) for Python"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Real Time Telecom B.V." }]
+keywords = ["camel", "cap", "ss7", "3gpp", "telecom"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Free Threading :: 3 - Stable",
+    "Topic :: Communications",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/Real-Time-Telecom-B-V/gsm_cap"
+Repository = "https://github.com/Real-Time-Telecom-B-V/gsm_cap"
+
+[tool.maturin]
+# Mixed layout: compiled ext at `gsm_cap._gsm_cap`, pure-Python shim under python/.
+module-name = "gsm_cap._gsm_cap"
+python-source = "python"
+features = ["extension-module"]

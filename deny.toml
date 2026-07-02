@@ -1,4 +1,4 @@
-# cargo-deny — dependency-graph security / license / source policy for cap.
+# cargo-deny — dependency-graph security / license / source policy for gsm_cap.
 # Local: `cargo deny check`  ·  CI: .github/workflows/audit.yml
 # Docs: https://embarkstudios.github.io/cargo-deny/
 
@@ -18,9 +18,8 @@ ignore = []
 [bans]
 multiple-versions = "warn"
 wildcards = "warn"
-# cap is pure Rust: the only runtime deps are thiserror, serde, and
-# async-trait — all MIT/Apache. No C libraries are linked, so there is no
-# C-FFI ban list here.
+# gsm_cap's runtime deps are rasn + thiserror (pyo3 is optional, behind the
+# `python` feature). No C libraries are linked, so there is no C-FFI ban list.
 
 [licenses]
 # The crate is MIT; keep dependencies OSI-permissive.
@@ -43,3 +42,10 @@ confidence-threshold = 0.9
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The sibling SS7 codecs `tcap` and `sccp` are git dev-dependencies (they back
+# `benches/integration.rs`, the full-stack CAP→TCAP→SCCP benchmark). They are not
+# part of the published crate. Allow only these two RTT repositories.
+allow-git = [
+    "https://github.com/Real-Time-Telecom-B-V/tcap",
+    "https://github.com/Real-Time-Telecom-B-V/sccp",
+]

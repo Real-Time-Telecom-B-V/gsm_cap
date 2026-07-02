@@ -29,8 +29,14 @@ pub mod op_codes;
 pub mod operations;
 pub mod types;
 
+#[cfg(feature = "python")]
+pub mod python;
+
 pub use error::CapError;
 pub use op_codes::operation_name;
+
+#[cfg(feature = "python")]
+pub use python::register;
 
 /// Encode a CAP operation argument/result to BER.
 pub fn encode<T: rasn::Encode>(value: &T) -> Result<Vec<u8>, CapError> {
