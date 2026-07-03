@@ -656,7 +656,8 @@ dependencies = [
 [[package]]
 name = "sccp"
 version = "1.0.0"
-source = "git+https://github.com/Real-Time-Telecom-B-V/sccp?branch=main#4e3b638f017e306e4c082a55901ecb2ca1261ecb"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3c31be7622ab9b131cb7bf60f4758178d2626a0a313db24f94bf1aa10a02fbb"
 dependencies = [
  "thiserror",
 ]
@@ -763,7 +764,8 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 [[package]]
 name = "tcap"
 version = "1.0.0"
-source = "git+https://github.com/Real-Time-Telecom-B-V/tcap?branch=main#28849808a039af3854a6082983a351ee61dcf777"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b0b3ae9ef7e1f435857ee51059c1db6a30f512b450ad232bf63e4ad84b3090a"
 dependencies = [
  "hex",
  "rasn",

@@ -49,8 +49,8 @@ criterion = "0.8"
 # Sibling SS7 codecs, used ONLY by benches/integration.rs to assemble a realistic
 # full CAMEL stack message (CAP arg → TCAP component/transaction → SCCP UDT) and
 # measure the whole encode/decode path end to end. Not part of the published crate.
-tcap = { git = "https://github.com/Real-Time-Telecom-B-V/tcap", branch = "main" }
-sccp = { git = "https://github.com/Real-Time-Telecom-B-V/sccp", branch = "main" }
+tcap = "1"
+sccp = "1"
 
 [[bench]]
 name = "codec"
