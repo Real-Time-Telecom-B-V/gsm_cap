@@ -276,10 +276,11 @@ dependencies = [
 
 [[package]]
 name = "gsm_cap"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "criterion",
  "hex",
+ "inap",
  "pyo3",
  "rasn",
  "sccp",
@@ -309,6 +310,16 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "inap"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4972df8ea3964ab2b5f274b47487984a04deb3eab92e4e768dbe3dd76b5f61d1"
+dependencies = [
+ "rasn",
+ "thiserror",
+]
 
 [[package]]
 name = "itertools"

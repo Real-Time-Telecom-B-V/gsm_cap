@@ -66,15 +66,6 @@ pub struct ReleaseCallArg {
     pub cause: Cause,
 }
 
-/// ConnectToResource (op 19).
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct ConnectToResourceArg {
-    #[rasn(tag(context, 0))]
-    pub resource_address_ipv4: Option<CalledPartyNumber>,
-    #[rasn(tag(context, 3))]
-    pub resource_address_none: Option<()>,
-}
-
 /// Cancel (op 53).
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 #[rasn(choice)]
@@ -129,37 +120,17 @@ pub struct FurnishChargingInformationArg {
     pub fci_billing_charging_characteristics: OctetString,
 }
 
-// ── Specialised resources ───────────────────────────────────────────────────
+// ── Specialised resources + call-to-resource (shared with INAP) ──────────────
 
-/// PlayAnnouncement (op 47).
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct PlayAnnouncementArg {
-    #[rasn(tag(context, 0))]
-    pub information_to_send: OctetString,
-    #[rasn(tag(context, 1))]
-    pub disconnect_from_ip_forbidden: Option<bool>,
-    #[rasn(tag(context, 2))]
-    pub request_announcement_complete: Option<bool>,
-}
-
-/// PromptAndCollectUserInformation (op 48) argument.
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct PromptAndCollectUserInformationArg {
-    #[rasn(tag(context, 0))]
-    pub collected_info: OctetString,
-    #[rasn(tag(context, 1))]
-    pub disconnect_from_ip_forbidden: Option<bool>,
-    #[rasn(tag(context, 2))]
-    pub information_to_send: Option<OctetString>,
-}
-
-/// PromptAndCollectUserInformation (op 48) result.
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-#[rasn(choice)]
-pub enum PromptAndCollectUserInformationRes {
-    #[rasn(tag(context, 0))]
-    DigitsResponse(OctetString),
-}
+// These user-interaction operations are byte-identical between CAP and INAP
+// CS-2, so they are re-exported from the canonical `inap` crate rather than
+// duplicated: `ConnectToResourceArg` (op 19), `PlayAnnouncementArg` (op 47) and
+// `PromptAndCollectUserInformationArg` / `…Res` (op 48). Same field names, tags
+// and wire encoding.
+pub use inap::operations::{
+    ConnectToResourceArg, PlayAnnouncementArg, PromptAndCollectUserInformationArg,
+    PromptAndCollectUserInformationRes,
+};
 
 // ── CAMEL for SMS (CAP v3+) ─────────────────────────────────────────────────
 

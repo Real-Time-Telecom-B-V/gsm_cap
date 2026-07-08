@@ -1,16 +1,23 @@
 //! Common CAP types (3GPP TS 29.078). Addresses are carried as `OCTET STRING`s
 //! in their respective ITU-T / 3GPP wire formats (Q.763, TS 24.008, TBCD).
+//!
+//! CAP was derived from INAP CS-2, so a family of leaf IEs is byte-identical
+//! between the two. Those are re-exported from the [`inap`] crate (the canonical
+//! home) rather than duplicated here, with the same names and wire encoding:
+//! [`CalledPartyNumber`], [`CallingPartyNumber`], [`Cause`], [`EventTypeBcsm`],
+//! [`MonitorMode`] and [`BcsmEvent`].
 
 use rasn::prelude::*;
+
+// ── Shared IN/CS-2 leaf IEs, re-exported from the canonical `inap` crate ──────
+pub use inap::types::{
+    BcsmEvent, CalledPartyNumber, CallingPartyNumber, Cause, EventTypeBcsm, MonitorMode,
+};
 
 /// Identifies the CAMEL service logic at the gsmSCF.
 pub type ServiceKey = Integer;
 /// Uniquely identifies a call at the gsmSSF.
 pub type CallReferenceNumber = OctetString;
-/// Called party number, Q.763 format.
-pub type CalledPartyNumber = OctetString;
-/// Calling party number, Q.763 format.
-pub type CallingPartyNumber = OctetString;
 /// Called party number, 3GPP TS 24.008 BCD format.
 pub type CalledPartyBcdNumber = OctetString;
 /// Location number, Q.763 format.
@@ -19,8 +26,6 @@ pub type LocationNumber = OctetString;
 pub type OriginalCalledPartyId = OctetString;
 /// Redirecting party ID, Q.763 format.
 pub type RedirectingPartyId = OctetString;
-/// Q.850 cause value.
-pub type Cause = OctetString;
 /// IMSI (TBCD in an OCTET STRING).
 pub type Imsi = OctetString;
 /// ISDN-AddressString (TBCD: byte 0 = NPI/TON, then digits).
@@ -41,46 +46,6 @@ pub struct LocationInformation {
     pub cell_global_id_or_service_area_id_or_lai: Option<OctetString>,
     #[rasn(tag(context, 8))]
     pub msc_number: Option<IsdnAddressString>,
-}
-
-/// EventTypeBCSM — Basic Call State Model detection-point events.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
-#[rasn(enumerated)]
-pub enum EventTypeBcsm {
-    CollectedInfo = 2,
-    AnalysedInformation = 3,
-    RouteSelectFailure = 4,
-    OCalledPartyBusy = 5,
-    ONoAnswer = 6,
-    OAnswer = 7,
-    ODisconnect = 9,
-    OAbandon = 10,
-    TermAttemptAuthorized = 12,
-    TBusy = 13,
-    TNoAnswer = 14,
-    TAnswer = 15,
-    TDisconnect = 17,
-    TAbandon = 18,
-}
-
-/// MonitorMode — how a detection point should be reported.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
-#[rasn(enumerated)]
-pub enum MonitorMode {
-    Interrupted = 0,
-    NotifyAndContinue = 1,
-    Transparent = 2,
-}
-
-/// BCSMEvent — event detection-point configuration.
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct BcsmEvent {
-    #[rasn(tag(context, 0))]
-    pub event_type_bcsm: EventTypeBcsm,
-    #[rasn(tag(context, 1))]
-    pub monitor_mode: MonitorMode,
-    #[rasn(tag(context, 2))]
-    pub leg_id: Option<OctetString>,
 }
 
 /// EventTypeSMS — SMS detection-point events.
