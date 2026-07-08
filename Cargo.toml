@@ -1,6 +1,6 @@
 [package]
 name = "gsm_cap"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 rust-version = "1.80"
 description = "CAMEL Application Part (CAP) codec (3GPP TS 29.078) — BER encode/decode of the gsmSSF-gsmSCF operations + application contexts"
@@ -25,6 +25,13 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 rasn = "0.28"
 thiserror = "2"
+
+# Canonical home for the IN/CS-2 leaf IEs shared with CAP (EventTypeBcsm,
+# MonitorMode, BcsmEvent, ConnectToResourceArg, PlayAnnouncementArg,
+# PromptAndCollectUserInformation arg/res, and the CalledPartyNumber /
+# CallingPartyNumber / Cause aliases). gsm_cap re-exports them rather than
+# duplicating the definitions; the wire encoding is byte-identical.
+inap = "1"
 
 # Optional Python bindings (feature = "python"). Kept out of the default build so
 # `cargo add gsm_cap` and crates.io consumers pull ZERO pyo3. pyo3 >= 0.28 defaults
