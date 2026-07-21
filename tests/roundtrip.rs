@@ -50,9 +50,18 @@ fn connect_round_trip() {
 
 #[test]
 fn release_call_round_trip() {
-    round_trip(&ReleaseCallArg {
-        cause: vec![0x90, 0x03].into(),
-    });
+    round_trip(&ReleaseCallArg(vec![0x90, 0x03].into()));
+}
+
+#[test]
+fn release_call_encodes_as_a_bare_cause_not_a_sequence() {
+    // CAP releaseCall's argument is a bare `Cause` (OCTET STRING), not a SEQUENCE.
+    // The BER must therefore start with the universal OCTET STRING tag (0x04) and
+    // NOT the constructed SEQUENCE tag (0x30) — the earlier named-field form
+    // emitted the SEQUENCE wrapper, which conforming peers / dissectors reject.
+    let ber = gsm_cap::encode(&ReleaseCallArg(vec![0x90, 0x03].into())).unwrap();
+    assert_eq!(ber, vec![0x04, 0x02, 0x90, 0x03], "bare OCTET STRING Cause");
+    assert_ne!(ber[0], 0x30, "must not be a SEQUENCE");
 }
 
 #[test]

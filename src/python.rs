@@ -472,9 +472,7 @@ impl PyReleaseCallArg {
 
     /// Encode the ReleaseCall argument to BER `bytes`.
     fn encode<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
-        let core = ReleaseCallArg {
-            cause: self.cause.clone().into(),
-        };
+        let core = ReleaseCallArg(self.cause.clone().into());
         let bytes = crate::encode(&core).map_err(cap_err)?;
         Ok(to_pybytes(py, &bytes))
     }
@@ -484,7 +482,7 @@ impl PyReleaseCallArg {
     fn decode(_cls: &Bound<'_, pyo3::types::PyType>, data: &[u8]) -> PyResult<Self> {
         let core: ReleaseCallArg = crate::decode(data).map_err(cap_err)?;
         Ok(Self {
-            cause: core.cause.to_vec(),
+            cause: core.0.to_vec(),
         })
     }
 

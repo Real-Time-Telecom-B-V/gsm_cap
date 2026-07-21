@@ -15,7 +15,7 @@
 //! use gsm_cap::operations::ReleaseCallArg;
 //!
 //! // gsmSCF → gsmSSF: release the call with a Q.850 cause (synthetic bytes).
-//! let rel = ReleaseCallArg { cause: vec![0x90, 0x03].into() };
+//! let rel = ReleaseCallArg(vec![0x90, 0x03].into());
 //! let ber = gsm_cap::encode(&rel).unwrap();
 //! let back: ReleaseCallArg = gsm_cap::decode(&ber).unwrap();
 //! assert_eq!(rel, back);

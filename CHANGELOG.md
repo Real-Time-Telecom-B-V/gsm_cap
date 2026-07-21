@@ -5,6 +5,19 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
+## [1.2.0]
+
+### Fixed
+- `ReleaseCallArg` now encodes as a bare `Cause` (OCTET STRING), not a
+  `SEQUENCE`. It was a named-field struct, which emitted an extra SEQUENCE
+  wrapper that a conforming peer / dissector rejects as malformed (Wireshark:
+  "This field lies beyond the end of the known sequence definition"). It is now
+  a `#[rasn(delegate)]` newtype, matching `inap`'s `ReleaseCallArg` and CAP
+  (TS 29.078), where the releaseCall argument is a bare `CauseValue`. Round-trip
+  tests missed it because encode and decode shared the wrapper; a byte-level test
+  now pins the bare `04 02 …` encoding. Construction changes from
+  `ReleaseCallArg { cause }` to `ReleaseCallArg(cause)`.
+
 ## [1.1.0]
 
 ### Changed

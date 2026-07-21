@@ -59,12 +59,14 @@ pub struct ConnectArg {
     pub generic_numbers: Option<Vec<OctetString>>,
 }
 
-/// ReleaseCall (op 22) — gsmSCF instructs the gsmSSF to release the call.
+/// ReleaseCall (op 22) — gsmSCF instructs the gsmSSF to release the call. In CAP
+/// the argument is a bare `Cause` (Q.850), not a SEQUENCE, so this is a delegate
+/// newtype: it BER-encodes as the inner OCTET STRING (matching `inap`'s
+/// `ReleaseCallArg`). A named-field struct here would emit an extra SEQUENCE
+/// wrapper that a conforming peer / dissector rejects as malformed.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct ReleaseCallArg {
-    /// Q.850 cause value.
-    pub cause: Cause,
-}
+#[rasn(delegate)]
+pub struct ReleaseCallArg(pub Cause);
 
 /// Cancel (op 53).
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
