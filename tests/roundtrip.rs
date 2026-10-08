@@ -13,7 +13,8 @@ use gsm_cap::operations::{
     ReleaseCallArg, RequestReportBcsmEventArg,
 };
 use gsm_cap::types::{
-    BcsmEvent, EventTypeBcsm, EventTypeSms, LegId, MonitorMode, ReceivingSideId, LEG1, LEG2,
+    BcsmEvent, EventTypeBcsm, EventTypeSms, LegId, MonitorMode, ReceivingSideId, SendingSideId,
+    LEG1, LEG2,
 };
 
 fn round_trip<T: rasn::Decode + rasn::Encode + std::fmt::Debug + PartialEq>(v: &T) {
@@ -66,7 +67,10 @@ fn event_report_bcsm_round_trip() {
 
 #[test]
 fn apply_charging_round_trip() {
-    round_trip(&ApplyChargingArg::new(vec![0x00, 0x01, 0x02].into()));
+    round_trip(&ApplyChargingArg {
+        party_to_charge: Some(SendingSideId::leg(LEG1)),
+        ..ApplyChargingArg::new(vec![0xa0, 0x04, 0x80, 0x02, 0x0b, 0xb8].into())
+    });
 }
 
 #[test]

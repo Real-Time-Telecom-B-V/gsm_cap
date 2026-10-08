@@ -34,8 +34,10 @@ use crate::operations::{
     ReleaseCallArg, RequestReportBcsmEventArg,
 };
 use crate::types::{
-    BcsmEvent, DpSpecificCriteria, EventTypeBcsm, EventTypeSms, LegId, MessageType, MiscCallInfo,
-    MonitorMode, ReceivingSideId,
+    AudibleIndicator, BcsmEvent, CamelAChBillingChargingCharacteristics,
+    CamelAChBillingChargingCharacteristicsV3, DpSpecificCriteria, EventTypeBcsm, EventTypeSms,
+    LegId, MessageType, MiscCallInfo, MonitorMode, ReceivingSideId, SendingSideId,
+    TimeDurationCharging, TimeDurationChargingV3,
 };
 use crate::CapError;
 
@@ -719,7 +721,12 @@ impl PyEventReportBcsmArg {
 
 // ── ApplyCharging (op 35) ────────────────────────────────────────────────────
 
-/// ApplyCharging argument — gsmSCF → gsmSSF, install charging characteristics.
+/// ApplyCharging argument — gsmSCF → gsmSSF, grant a call period.
+///
+/// `ach_billing_charging_characteristics` is the BER encoding of a
+/// CAMEL-AChBillingChargingCharacteristics value (the content of the OCTET
+/// STRING member). `party_to_charge` is the one-octet leg, sent as
+/// `sendingSideID`.
 #[pyclass(
     name = "ApplyChargingArg",
     module = "gsm_cap._gsm_cap",
@@ -745,6 +752,63 @@ impl PyApplyChargingArg {
         }
     }
 
+    /// Build the argument for time-duration charging.
+    ///
+    /// `max_call_period_duration` is in 100 ms units. `tone` asks for the
+    /// warning tone before the period ends. `cap_version` picks the encoding
+    /// of that request, which differs between the phases: 3 gives
+    /// `tone [3] BOOLEAN`, 4 gives `audibleIndicator [3]`.
+    #[staticmethod]
+    #[pyo3(signature = (
+        max_call_period_duration,
+        *,
+        cap_version,
+        release_if_duration_exceeded = None,
+        tariff_switch_interval = None,
+        tone = None,
+        party_to_charge = None,
+    ))]
+    fn time_duration(
+        max_call_period_duration: u32,
+        cap_version: u32,
+        release_if_duration_exceeded: Option<bool>,
+        tariff_switch_interval: Option<u32>,
+        tone: Option<bool>,
+        party_to_charge: Option<Vec<u8>>,
+    ) -> PyResult<Self> {
+        let characteristics =
+            match cap_version {
+                ac::CAP_V3 => crate::encode(
+                    &CamelAChBillingChargingCharacteristicsV3::TimeDurationCharging(
+                        TimeDurationChargingV3 {
+                            release_if_duration_exceeded,
+                            tariff_switch_interval,
+                            tone,
+                            ..TimeDurationChargingV3::new(max_call_period_duration)
+                        },
+                    ),
+                ),
+                ac::CAP_V4 => crate::encode(
+                    &CamelAChBillingChargingCharacteristics::TimeDurationCharging(
+                        TimeDurationCharging {
+                            release_if_duration_exceeded,
+                            tariff_switch_interval,
+                            audible_indicator: tone.map(AudibleIndicator::Tone),
+                            ..TimeDurationCharging::new(max_call_period_duration)
+                        },
+                    ),
+                ),
+                _ => return Err(PyValueError::new_err(
+                    "cap_version is 3 or 4: the charging characteristics differ between the phases",
+                )),
+            }
+            .map_err(cap_err)?;
+        Ok(Self {
+            ach_billing_charging_characteristics: characteristics,
+            party_to_charge,
+        })
+    }
+
     #[getter]
     fn ach_billing_charging_characteristics<'py>(&self, py: Python<'py>) -> Bound<'py, PyBytes> {
         to_pybytes(py, &self.ach_billing_charging_characteristics)
@@ -757,7 +821,10 @@ impl PyApplyChargingArg {
     /// Encode the ApplyCharging argument to BER `bytes`.
     fn encode<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
         let core = ApplyChargingArg {
-            party_to_charge: self.party_to_charge.clone().map(Into::into),
+            party_to_charge: self
+                .party_to_charge
+                .clone()
+                .map(|leg| SendingSideId::SendingSideId(leg.into())),
             ..ApplyChargingArg::new(self.ach_billing_charging_characteristics.clone().into())
         };
         let bytes = crate::encode(&core).map_err(cap_err)?;
@@ -772,7 +839,10 @@ impl PyApplyChargingArg {
             ach_billing_charging_characteristics: core
                 .ach_billing_charging_characteristics
                 .to_vec(),
-            party_to_charge: core.party_to_charge.as_ref().map(|b| b.to_vec()),
+            party_to_charge: core
+                .party_to_charge
+                .as_ref()
+                .map(|leg| leg.leg_type().to_vec()),
         })
     }
 

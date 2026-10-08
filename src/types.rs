@@ -771,6 +771,253 @@ pub struct InitialDpArgExtension {
     pub release_call_arg_extension_allowed: Option<()>,
 }
 
+// ── Charging ────────────────────────────────────────────────────────────────
+//
+// ApplyCharging, ApplyChargingReport and FurnishChargingInformation carry an
+// OCTET STRING whose content is itself the BER encoding of one of the
+// `CAMEL-...` types below ("shall be the result of the BER-encoded value of
+// the type"). The operation arguments keep the OCTET STRING; these types are
+// what goes inside it.
+
+/// Burst: the shape of one warning tone burst.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct Burst {
+    /// `DEFAULT 1`.
+    #[rasn(tag(context, 0))]
+    pub number_of_bursts: Option<u8>,
+    /// `DEFAULT 2`, in 500 ms units.
+    #[rasn(tag(context, 1))]
+    pub burst_interval: Option<u16>,
+    /// `DEFAULT 3`.
+    #[rasn(tag(context, 2))]
+    pub number_of_tones_in_burst: Option<u8>,
+    /// `DEFAULT 2`, in 100 ms units.
+    #[rasn(tag(context, 3))]
+    pub tone_duration: Option<u8>,
+    /// `DEFAULT 2`, in 100 ms units.
+    #[rasn(tag(context, 4))]
+    pub tone_interval: Option<u8>,
+}
+
+/// BurstList.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct BurstList {
+    /// `DEFAULT 30`, seconds before the call period ends.
+    #[rasn(tag(context, 0))]
+    pub warning_period: Option<u16>,
+    #[rasn(tag(context, 1))]
+    pub bursts: Burst,
+}
+
+/// AudibleIndicator (phase 4). `tone` carries no context tag: it is a
+/// universal BOOLEAN.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum AudibleIndicator {
+    Tone(bool),
+    #[rasn(tag(context, 1))]
+    BurstList(BurstList),
+}
+
+/// The `timeDurationCharging` of CAMEL-AChBillingChargingCharacteristics as
+/// phase 4 defines it (Release 5 onward).
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TimeDurationCharging {
+    /// In 100 ms units, INTEGER (1..864000).
+    #[rasn(tag(context, 0))]
+    pub max_call_period_duration: u32,
+    /// `DEFAULT FALSE`.
+    #[rasn(tag(context, 1))]
+    pub release_if_duration_exceeded: Option<bool>,
+    /// In seconds, INTEGER (1..86400).
+    #[rasn(tag(context, 2))]
+    pub tariff_switch_interval: Option<u32>,
+    /// `DEFAULT tone: FALSE`. A CHOICE, so `[3]` is EXPLICIT:
+    /// `A3 03 01 01 FF` for a warning tone.
+    #[rasn(tag(explicit(context, 3)))]
+    pub audible_indicator: Option<AudibleIndicator>,
+    #[rasn(tag(context, 4))]
+    pub extensions: Option<Extensions>,
+}
+
+impl TimeDurationCharging {
+    /// A call period of `max_call_period_duration` (100 ms units) with every
+    /// optional member absent.
+    pub fn new(max_call_period_duration: u32) -> Self {
+        Self {
+            max_call_period_duration,
+            release_if_duration_exceeded: None,
+            tariff_switch_interval: None,
+            audible_indicator: None,
+            extensions: None,
+        }
+    }
+}
+
+/// CAMEL-AChBillingChargingCharacteristics, phase 4 (TS 29.078 Release 5
+/// onward). Its BER encoding is the content of
+/// `ApplyChargingArg.aChBillingChargingCharacteristics`.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CamelAChBillingChargingCharacteristics {
+    #[rasn(tag(context, 0))]
+    TimeDurationCharging(TimeDurationCharging),
+}
+
+/// The `timeDurationCharging` of CAMEL-AChBillingChargingCharacteristics as
+/// phase 3 defines it (Release 1999 and Release 4).
+///
+/// Member `[3]` changed between the phases and the two are not compatible on
+/// the wire: phase 3 has `tone [3] BOOLEAN` (`83 01 FF`), phase 4 has
+/// `audibleIndicator [3] AudibleIndicator` (`A3 03 01 01 FF`). Send the form
+/// that matches the application context of the dialogue.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TimeDurationChargingV3 {
+    /// In 100 ms units, INTEGER (1..864000).
+    #[rasn(tag(context, 0))]
+    pub max_call_period_duration: u32,
+    /// `DEFAULT FALSE`.
+    #[rasn(tag(context, 1))]
+    pub release_if_duration_exceeded: Option<bool>,
+    /// In seconds, INTEGER (1..86400).
+    #[rasn(tag(context, 2))]
+    pub tariff_switch_interval: Option<u32>,
+    /// `DEFAULT FALSE`.
+    #[rasn(tag(context, 3))]
+    pub tone: Option<bool>,
+    #[rasn(tag(context, 4))]
+    pub extensions: Option<Extensions>,
+}
+
+impl TimeDurationChargingV3 {
+    /// A call period of `max_call_period_duration` (100 ms units) with every
+    /// optional member absent.
+    pub fn new(max_call_period_duration: u32) -> Self {
+        Self {
+            max_call_period_duration,
+            release_if_duration_exceeded: None,
+            tariff_switch_interval: None,
+            tone: None,
+            extensions: None,
+        }
+    }
+}
+
+/// CAMEL-AChBillingChargingCharacteristics, phase 3 (TS 29.078 Release 1999
+/// and Release 4). See [`TimeDurationChargingV3`].
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CamelAChBillingChargingCharacteristicsV3 {
+    #[rasn(tag(context, 0))]
+    TimeDurationCharging(TimeDurationChargingV3),
+}
+
+/// AChChargingAddress (phase 4): the leg or the gsmSRF connection charged.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum AChChargingAddress {
+    /// LegID is a CHOICE, so `[2]` is EXPLICIT.
+    #[rasn(tag(explicit(context, 2)))]
+    LegId(LegId),
+    /// CallSegmentID.
+    #[rasn(tag(context, 50))]
+    SrfConnection(u8),
+}
+
+/// TimeIfTariffSwitch, in 100 ms units.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TimeIfTariffSwitch {
+    #[rasn(tag(context, 0))]
+    pub time_since_tariff_switch: u32,
+    #[rasn(tag(context, 1))]
+    pub tariff_switch_interval: Option<u32>,
+}
+
+/// TimeInformation.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum TimeInformation {
+    /// Elapsed time in 100 ms units, INTEGER (0..864000).
+    #[rasn(tag(context, 0))]
+    TimeIfNoTariffSwitch(u32),
+    #[rasn(tag(context, 1))]
+    TimeIfTariffSwitch(TimeIfTariffSwitch),
+}
+
+/// The `timeDurationChargingResult` of CAMEL-CallResult.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TimeDurationChargingResult {
+    #[rasn(tag(explicit(context, 0)))]
+    pub party_to_charge: ReceivingSideId,
+    #[rasn(tag(explicit(context, 1)))]
+    pub time_information: TimeInformation,
+    /// `DEFAULT TRUE` (`callActive` in phase 3, same encoding).
+    #[rasn(tag(context, 2))]
+    pub leg_active: Option<bool>,
+    /// (`callReleasedAtTcpExpiry` in phase 3, same encoding.)
+    #[rasn(tag(context, 3))]
+    pub call_leg_released_at_tcp_expiry: Option<()>,
+    #[rasn(tag(context, 4))]
+    pub extensions: Option<Extensions>,
+    /// `DEFAULT legID:receivingSideID:leg1`. Phase 4 only.
+    #[rasn(tag(explicit(context, 5)))]
+    pub a_ch_charging_address: Option<AChChargingAddress>,
+}
+
+impl TimeDurationChargingResult {
+    /// A result for `party_to_charge` with every optional member absent.
+    pub fn new(party_to_charge: ReceivingSideId, time_information: TimeInformation) -> Self {
+        Self {
+            party_to_charge,
+            time_information,
+            leg_active: None,
+            call_leg_released_at_tcp_expiry: None,
+            extensions: None,
+            a_ch_charging_address: None,
+        }
+    }
+}
+
+/// CAMEL-CallResult. Its BER encoding is the content of the
+/// ApplyChargingReport argument.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CamelCallResult {
+    #[rasn(tag(context, 0))]
+    TimeDurationChargingResult(TimeDurationChargingResult),
+}
+
+/// AppendFreeFormatData.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum AppendFreeFormatData {
+    Overwrite = 0,
+    Append = 1,
+}
+
+/// The `fCIBCCCAMELsequence1` of CAMEL-FCIBillingChargingCharacteristics.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct FciBccCamelSequence1 {
+    /// 1 to 160 octets copied into the call record.
+    #[rasn(tag(context, 0))]
+    pub free_format_data: OctetString,
+    /// `DEFAULT sendingSideID: leg1`. A CHOICE, so `[1]` is EXPLICIT.
+    #[rasn(tag(explicit(context, 1)))]
+    pub party_to_charge: Option<SendingSideId>,
+    /// `DEFAULT overwrite`.
+    #[rasn(tag(context, 2))]
+    pub append_free_format_data: Option<AppendFreeFormatData>,
+}
+
+/// CAMEL-FCIBillingChargingCharacteristics. Its BER encoding is the content
+/// of the FurnishChargingInformation argument.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CamelFciBillingChargingCharacteristics {
+    #[rasn(tag(context, 0))]
+    FciBccCamelSequence1(FciBccCamelSequence1),
+}
+
 // ── MAP types CAP imports (3GPP TS 29.002 V18.0.0 clause 17.7) ───────────────
 //
 // The MAP modules are `DEFINITIONS IMPLICIT TAGS`, like the CAP ones. A tag in

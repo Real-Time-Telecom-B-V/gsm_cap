@@ -4,15 +4,17 @@
 
 use rasn::prelude::*;
 
+use crate::error::CapError;
 use crate::types::{
-    AdditionalCallingPartyNumber, AlertingPattern, BcsmEvent, BearerCapability,
+    AChChargingAddress, AdditionalCallingPartyNumber, AlertingPattern, BcsmEvent, BearerCapability,
     CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber, CallingPartyNumber,
-    CallingPartysCategory, Carrier, Cause, CgEncountered, ChargeNumber, CugInterlock,
-    EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, ExtBasicServiceCode, Extensions,
-    GenericNumbers, HighLayerCompatibility, Imsi, InitialDpArgExtension, IpSspCapabilities,
-    IsdnAddressString, LegId, LocationInformation, LocationNumber, MiscCallInfo, NaOliInfo,
-    OriginalCalledPartyId, ReceivingSideId, RedirectingPartyId, RedirectionInformation,
-    ServiceInteractionIndicatorsTwo, ServiceKey, SmsEvent, SubscriberState, TimeAndTimezone,
+    CallingPartysCategory, CamelCallResult, CamelFciBillingChargingCharacteristics, Carrier, Cause,
+    CgEncountered, ChargeNumber, CugInterlock, EventSpecificInformationBcsm, EventTypeBcsm,
+    EventTypeSms, ExtBasicServiceCode, Extensions, GenericNumbers, HighLayerCompatibility, Imsi,
+    InitialDpArgExtension, IpSspCapabilities, IsdnAddressString, LegId, LocationInformation,
+    LocationNumber, MiscCallInfo, NaOliInfo, OriginalCalledPartyId, ReceivingSideId,
+    RedirectingPartyId, RedirectionInformation, SendingSideId, ServiceInteractionIndicatorsTwo,
+    ServiceKey, SmsEvent, SubscriberState, TimeAndTimezone,
 };
 
 // ── Call control ────────────────────────────────────────────────────────────
@@ -342,37 +344,106 @@ impl EventReportBcsmArg {
 
 // ── Charging ────────────────────────────────────────────────────────────────
 
-/// ApplyCharging (op 35).
+/// ApplyCharging (op 35): the gsmSCF grants a call period.
+///
+/// ```text
+/// ApplyChargingArg ::= SEQUENCE {
+///   aChBillingChargingCharacteristics [0]  AChBillingChargingCharacteristics,
+///   partyToCharge                     [2]  SendingSideID DEFAULT sendingSideID : leg1,  -- explicit
+///   extensions                        [3]  Extensions OPTIONAL,
+///   aChChargingAddress                [50] AChChargingAddress                           -- explicit
+///                                          DEFAULT legID:sendingSideID:leg1,
+///   ...}
+/// ```
+///
+/// `aChBillingChargingCharacteristics` is an OCTET STRING holding the BER
+/// encoding of a CAMEL-AChBillingChargingCharacteristics value. Build it with
+/// [`ApplyChargingArg::with_characteristics`] from
+/// [`CamelAChBillingChargingCharacteristics`](crate::types::CamelAChBillingChargingCharacteristics)
+/// on a phase 4 dialogue or
+/// [`CamelAChBillingChargingCharacteristicsV3`](crate::types::CamelAChBillingChargingCharacteristicsV3)
+/// on a phase 3 one: the two differ on the wire.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct ApplyChargingArg {
     #[rasn(tag(context, 0))]
     pub ach_billing_charging_characteristics: OctetString,
-    #[rasn(tag(context, 2))]
-    pub party_to_charge: Option<OctetString>,
+    #[rasn(tag(explicit(context, 2)))]
+    pub party_to_charge: Option<SendingSideId>,
+    #[rasn(tag(context, 3))]
+    pub extensions: Option<Extensions>,
+    /// Phase 4 only.
+    #[rasn(tag(explicit(context, 50)))]
+    pub a_ch_charging_address: Option<AChChargingAddress>,
 }
 
 impl ApplyChargingArg {
-    /// An ApplyCharging carrying `characteristics` with every optional member
-    /// absent.
+    /// An ApplyCharging carrying the already encoded `characteristics` with
+    /// every optional member absent.
     pub fn new(characteristics: OctetString) -> Self {
         Self {
             ach_billing_charging_characteristics: characteristics,
             party_to_charge: None,
+            extensions: None,
+            a_ch_charging_address: None,
         }
+    }
+
+    /// An ApplyCharging carrying the BER encoding of `characteristics`.
+    pub fn with_characteristics<T: rasn::Encode>(characteristics: &T) -> Result<Self, CapError> {
+        Ok(Self::new(crate::encode(characteristics)?.into()))
+    }
+
+    /// Decode the characteristics as `T`, the phase 3 or the phase 4 type.
+    pub fn characteristics<T: rasn::Decode + rasn::Encode>(&self) -> Result<T, CapError> {
+        crate::decode(&self.ach_billing_charging_characteristics)
     }
 }
 
-/// ApplyChargingReport (op 36).
+/// ApplyChargingReport (op 36): the gsmSSF reports the time used.
+///
+/// `ApplyChargingReportArg ::= CallResult`, and CallResult is an OCTET STRING
+/// holding the BER encoding of a CAMEL-CallResult value. The argument is that
+/// bare OCTET STRING; there is no SEQUENCE around it.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct ApplyChargingReportArg {
-    /// Encoded call result.
-    pub call_result: OctetString,
+#[rasn(delegate)]
+pub struct ApplyChargingReportArg(pub OctetString);
+
+impl ApplyChargingReportArg {
+    /// An argument carrying the BER encoding of `call_result`.
+    pub fn from_call_result(call_result: &CamelCallResult) -> Result<Self, CapError> {
+        Ok(Self(crate::encode(call_result)?.into()))
+    }
+
+    /// Decode the CAMEL-CallResult inside the OCTET STRING.
+    pub fn call_result(&self) -> Result<CamelCallResult, CapError> {
+        crate::decode(&self.0)
+    }
 }
 
-/// FurnishChargingInformation (op 34).
+/// FurnishChargingInformation (op 34): the gsmSCF adds data to the call
+/// record.
+///
+/// `FurnishChargingInformationArg ::= FCIBillingChargingCharacteristics`, an
+/// OCTET STRING holding the BER encoding of a
+/// CAMEL-FCIBillingChargingCharacteristics value. The argument is that bare
+/// OCTET STRING; there is no SEQUENCE around it.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct FurnishChargingInformationArg {
-    pub fci_billing_charging_characteristics: OctetString,
+#[rasn(delegate)]
+pub struct FurnishChargingInformationArg(pub OctetString);
+
+impl FurnishChargingInformationArg {
+    /// An argument carrying the BER encoding of `characteristics`.
+    pub fn from_characteristics(
+        characteristics: &CamelFciBillingChargingCharacteristics,
+    ) -> Result<Self, CapError> {
+        Ok(Self(crate::encode(characteristics)?.into()))
+    }
+
+    /// Decode the CAMEL-FCIBillingChargingCharacteristics inside the OCTET
+    /// STRING.
+    pub fn characteristics(&self) -> Result<CamelFciBillingChargingCharacteristics, CapError> {
+        crate::decode(&self.0)
+    }
 }
 
 // ── Specialised resources + call-to-resource (shared with INAP) ──────────────

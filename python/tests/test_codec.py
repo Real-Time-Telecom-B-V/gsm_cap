@@ -176,11 +176,28 @@ def test_event_report_bcsm_rejects_a_malformed_leg() -> None:
 
 def test_apply_charging_round_trip() -> None:
     a = gsm_cap.ApplyChargingArg(
-        bytes([0x00, 0x01, 0x02]), party_to_charge=bytes([0x02])
+        bytes.fromhex("a00480020bb8"), party_to_charge=bytes([0x01])
     )
+    # aChBillingChargingCharacteristics [0] OCTET STRING; partyToCharge [2]
+    # EXPLICIT { sendingSideID [0] leg1 }.
+    assert a.encode() == bytes.fromhex("300d8006a00480020bb8a203800101")
     back = gsm_cap.ApplyChargingArg.decode(a.encode())
-    assert back.ach_billing_charging_characteristics == bytes([0x00, 0x01, 0x02])
-    assert back.party_to_charge == bytes([0x02])
+    assert back.ach_billing_charging_characteristics == bytes.fromhex("a00480020bb8")
+    assert back.party_to_charge == bytes([0x01])
+
+
+def test_apply_charging_time_duration_differs_between_phases() -> None:
+    v3 = gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=3, tone=True)
+    v4 = gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=4, tone=True)
+    # Phase 3: tone [3] BOOLEAN. Phase 4: audibleIndicator [3] EXPLICIT { BOOLEAN }.
+    assert v3.ach_billing_charging_characteristics == bytes.fromhex(
+        "a00780020bb88301ff"
+    )
+    assert v4.ach_billing_charging_characteristics == bytes.fromhex(
+        "a00980020bb8a3030101ff"
+    )
+    with pytest.raises(ValueError):
+        gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=2)
 
 
 def test_initial_dp_sms_round_trip() -> None:

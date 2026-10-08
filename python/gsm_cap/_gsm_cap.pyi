@@ -178,7 +178,12 @@ class EventReportBcsmArg:
     def decode(cls, data: bytes) -> EventReportBcsmArg: ...
 
 class ApplyChargingArg:
-    """ApplyCharging argument (op 35) — gsmSCF → gsmSSF."""
+    """ApplyCharging argument (op 35) — gsmSCF → gsmSSF.
+
+    ``ach_billing_charging_characteristics`` is the BER encoding of a
+    CAMEL-AChBillingChargingCharacteristics value; :meth:`time_duration` builds
+    it. ``party_to_charge`` is the one-octet leg, sent as ``sendingSideID``.
+    """
 
     ach_billing_charging_characteristics: bytes
     party_to_charge: Optional[bytes]
@@ -188,6 +193,21 @@ class ApplyChargingArg:
         *,
         party_to_charge: Optional[bytes] = ...,
     ) -> None: ...
+    @staticmethod
+    def time_duration(
+        max_call_period_duration: int,
+        *,
+        cap_version: int,
+        release_if_duration_exceeded: Optional[bool] = ...,
+        tariff_switch_interval: Optional[int] = ...,
+        tone: Optional[bool] = ...,
+        party_to_charge: Optional[bytes] = ...,
+    ) -> ApplyChargingArg:
+        """Time-duration charging for a CAP phase 3 or phase 4 dialogue.
+
+        ``max_call_period_duration`` is in 100 ms units. The warning tone is
+        encoded differently in the two phases, hence ``cap_version``.
+        """
     def encode(self) -> bytes: ...
     @classmethod
     def decode(cls, data: bytes) -> ApplyChargingArg: ...
