@@ -1,6 +1,21 @@
-//! CAP operation arguments and results (3GPP TS 29.078). Each type derives
-//! `rasn` BER `Encode`/`Decode`; a consumer wraps them in TCAP components with
-//! the matching [operation code](crate::op_codes).
+//! CAP operation arguments and results. Each type derives `rasn` BER
+//! `Encode`/`Decode`; a consumer wraps them in TCAP components with the
+//! matching [operation code](crate::op_codes).
+//!
+//! The definitions follow the ASN.1 of **3GPP TS 29.078 V18.0.0 (Release 18)**:
+//! clause 6.1.1 for circuit-switched call control, 6.2 for the gsmSRF
+//! operations and 7.1 for SMS. Each argument was checked against that text and
+//! against Wireshark 4.6, and the tests keep a hand-assembled byte vector for
+//! every one. See [`types`](crate::types) for the tagging rules that decide
+//! the bytes.
+//!
+//! Every member the ASN.1 defines is modelled, because `rasn` refuses a member
+//! it does not know: an argument type with gaps cannot decode what a real peer
+//! sends. Each argument with a mandatory member has a `new` that leaves the
+//! optional ones absent.
+//!
+//! `continue` (31), `activityTest` (55) and `continueSMS` (65) have no
+//! argument and so no type here.
 
 use rasn::prelude::*;
 
@@ -253,11 +268,17 @@ impl ConnectArg {
     }
 }
 
-/// ReleaseCall (op 22) — gsmSCF instructs the gsmSSF to release the call. In CAP
-/// the argument is a bare `Cause` (Q.850), not a SEQUENCE, so this is a delegate
-/// newtype: it BER-encodes as the inner OCTET STRING (matching `inap`'s
-/// `ReleaseCallArg`). A named-field struct here would emit an extra SEQUENCE
-/// wrapper that a conforming peer / dissector rejects as malformed.
+/// ReleaseCall (op 22): the gsmSCF releases the call.
+///
+/// The argument is a bare `Cause` (Q.850 as carried in ISUP), an OCTET
+/// STRING; there is no SEQUENCE around it.
+///
+/// From Release 6 the ASN.1 is `CHOICE { allCallSegments AllCallSegments,
+/// allCallSegmentsWithExtension [2] ... }`, where `AllCallSegments ::= Cause`.
+/// This type is the first alternative, which is all a phase 3 peer knows and
+/// encodes to the same bytes in every release. The `[2]` alternative (a cause
+/// with extensions, allowed only when the gsmSSF announced
+/// `releaseCallArgExtensionAllowed`) is not modelled and is refused on decode.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 #[rasn(delegate)]
 pub struct ReleaseCallArg(pub Cause);

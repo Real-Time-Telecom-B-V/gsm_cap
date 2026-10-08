@@ -19,6 +19,11 @@
 //! RequestReportBCSMEvent, EventReportBCSM, ApplyCharging) plus CAMEL-for-SMS
 //! (InitialDPSMS). Result types and the specialised-resource ops are Rust-only for
 //! now (see `operations` / the README).
+//!
+//! Each pyclass exposes a subset of the members of its Rust type. `decode`
+//! accepts a complete argument and keeps the exposed members; the rest is not
+//! carried across, so a decode followed by an encode does not relay an argument
+//! unchanged.
 
 use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyValueError};
