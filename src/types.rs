@@ -1018,6 +1018,204 @@ pub enum CamelFciBillingChargingCharacteristics {
     FciBccCamelSequence1(FciBccCamelSequence1),
 }
 
+// ── Specialised resources ───────────────────────────────────────────────────
+
+/// VariablePart: one value spoken inside a variable announcement.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum VariablePart {
+    #[rasn(tag(context, 0))]
+    Integer(u32),
+    /// Digits (generic digits).
+    #[rasn(tag(context, 1))]
+    Number(Digits),
+    /// `HHMM`, BCD, 2 octets.
+    #[rasn(tag(context, 2))]
+    Time(OctetString),
+    /// `YYYYMMDD`, BCD, 4 octets.
+    #[rasn(tag(context, 3))]
+    Date(OctetString),
+    /// 4 octets.
+    #[rasn(tag(context, 4))]
+    Price(OctetString),
+}
+
+/// The `text` alternative of [`MessageId`].
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct MessageIdText {
+    #[rasn(tag(context, 0))]
+    pub message_content: Ia5String,
+    #[rasn(tag(context, 1))]
+    pub attributes: Option<OctetString>,
+}
+
+/// The `variableMessage` alternative of [`MessageId`].
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct VariableMessage {
+    #[rasn(tag(context, 0))]
+    pub elementary_message_id: u32,
+    /// `SEQUENCE SIZE (1..5) OF VariablePart`.
+    #[rasn(tag(context, 1))]
+    pub variable_parts: Vec<VariablePart>,
+}
+
+/// MessageID: which announcement to play.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum MessageId {
+    #[rasn(tag(context, 0))]
+    ElementaryMessageId(u32),
+    #[rasn(tag(context, 1))]
+    Text(MessageIdText),
+    #[rasn(tag(context, 29))]
+    ElementaryMessageIds(Vec<u32>),
+    #[rasn(tag(context, 30))]
+    VariableMessage(VariableMessage),
+}
+
+/// InbandInfo.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct InbandInfo {
+    /// A CHOICE, so `[0]` is EXPLICIT.
+    #[rasn(tag(explicit(context, 0)))]
+    pub message_id: MessageId,
+    #[rasn(tag(context, 1))]
+    pub number_of_repetitions: Option<u8>,
+    /// Seconds, INTEGER (0..32767).
+    #[rasn(tag(context, 2))]
+    pub duration: Option<u16>,
+    /// Seconds, INTEGER (0..32767).
+    #[rasn(tag(context, 3))]
+    pub interval: Option<u16>,
+}
+
+impl InbandInfo {
+    /// `message_id` played once, with every optional member absent.
+    pub fn new(message_id: MessageId) -> Self {
+        Self {
+            message_id,
+            number_of_repetitions: None,
+            duration: None,
+            interval: None,
+        }
+    }
+}
+
+/// Tone.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct Tone {
+    #[rasn(tag(context, 0))]
+    pub tone_id: u32,
+    /// Seconds.
+    #[rasn(tag(context, 1))]
+    pub duration: Option<u32>,
+}
+
+/// InformationToSend. A CHOICE, so every tagged member of this type is
+/// EXPLICIT.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum InformationToSend {
+    #[rasn(tag(context, 0))]
+    InbandInfo(InbandInfo),
+    #[rasn(tag(context, 1))]
+    Tone(Tone),
+}
+
+/// ErrorTreatment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum ErrorTreatment {
+    StdErrorAndInfo = 0,
+    Help = 1,
+    RepeatPrompt = 2,
+}
+
+/// CollectedDigits. Digit members are one BCD digit per octet (`0B` is `*`,
+/// `0C` is `#`); the time-outs are in seconds.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct CollectedDigits {
+    /// `DEFAULT 1`.
+    #[rasn(tag(context, 0))]
+    pub minimum_nb_of_digits: Option<u8>,
+    #[rasn(tag(context, 1))]
+    pub maximum_nb_of_digits: u8,
+    #[rasn(tag(context, 2))]
+    pub end_of_reply_digit: Option<OctetString>,
+    #[rasn(tag(context, 3))]
+    pub cancel_digit: Option<OctetString>,
+    #[rasn(tag(context, 4))]
+    pub start_digit: Option<OctetString>,
+    #[rasn(tag(context, 5))]
+    pub first_digit_time_out: Option<u8>,
+    #[rasn(tag(context, 6))]
+    pub inter_digit_time_out: Option<u8>,
+    /// `DEFAULT stdErrorAndInfo`.
+    #[rasn(tag(context, 7))]
+    pub error_treatment: Option<ErrorTreatment>,
+    /// `DEFAULT TRUE`.
+    #[rasn(tag(context, 8))]
+    pub interruptable_ann_ind: Option<bool>,
+    /// `DEFAULT FALSE`.
+    #[rasn(tag(context, 9))]
+    pub voice_information: Option<bool>,
+    /// `DEFAULT FALSE`.
+    #[rasn(tag(context, 10))]
+    pub voice_back: Option<bool>,
+}
+
+impl CollectedDigits {
+    /// Collect up to `maximum_nb_of_digits` with every optional member absent.
+    pub fn new(maximum_nb_of_digits: u8) -> Self {
+        Self {
+            minimum_nb_of_digits: None,
+            maximum_nb_of_digits,
+            end_of_reply_digit: None,
+            cancel_digit: None,
+            start_digit: None,
+            first_digit_time_out: None,
+            inter_digit_time_out: None,
+            error_treatment: None,
+            interruptable_ann_ind: None,
+            voice_information: None,
+            voice_back: None,
+        }
+    }
+}
+
+/// CollectedInfo. A CHOICE with one alternative, so every tagged member of
+/// this type is EXPLICIT.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CollectedInfo {
+    #[rasn(tag(context, 0))]
+    CollectedDigits(CollectedDigits),
+}
+
+/// The `resourceAddress` of ConnectToResource: an untagged CHOICE inside the
+/// SEQUENCE, so the alternative's tag appears directly.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum ResourceAddress {
+    /// IPRoutingAddress, in CalledPartyNumber format.
+    #[rasn(tag(context, 0))]
+    IpRoutingAddress(CalledPartyNumber),
+    /// The gsmSRF is co-located with the gsmSSF.
+    #[rasn(tag(context, 3))]
+    None(()),
+}
+
+/// CallSegmentToCancel (phase 4).
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct CallSegmentToCancel {
+    /// InvokeID, INTEGER (-128..127).
+    #[rasn(tag(context, 0))]
+    pub invoke_id: Option<i8>,
+    /// CallSegmentID.
+    #[rasn(tag(context, 1))]
+    pub call_segment_id: Option<u8>,
+}
+
 // ── MAP types CAP imports (3GPP TS 29.002 V18.0.0 clause 17.7) ───────────────
 //
 // The MAP modules are `DEFINITIONS IMPLICIT TAGS`, like the CAP ones. A tag in

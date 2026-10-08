@@ -5,17 +5,7 @@
 use rasn::prelude::*;
 
 use crate::error::CapError;
-use crate::types::{
-    AChChargingAddress, AdditionalCallingPartyNumber, AlertingPattern, BcsmEvent, BearerCapability,
-    CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber, CallingPartyNumber,
-    CallingPartysCategory, CamelCallResult, CamelFciBillingChargingCharacteristics, Carrier, Cause,
-    CgEncountered, ChargeNumber, CugInterlock, EventSpecificInformationBcsm, EventTypeBcsm,
-    EventTypeSms, ExtBasicServiceCode, Extensions, GenericNumbers, HighLayerCompatibility, Imsi,
-    InitialDpArgExtension, IpSspCapabilities, IsdnAddressString, LegId, LocationInformation,
-    LocationNumber, MiscCallInfo, NaOliInfo, OriginalCalledPartyId, ReceivingSideId,
-    RedirectingPartyId, RedirectionInformation, SendingSideId, ServiceInteractionIndicatorsTwo,
-    ServiceKey, SmsEvent, SubscriberState, TimeAndTimezone,
-};
+use crate::types::*;
 
 // ── Call control ────────────────────────────────────────────────────────────
 
@@ -272,7 +262,7 @@ impl ConnectArg {
 #[rasn(delegate)]
 pub struct ReleaseCallArg(pub Cause);
 
-/// Cancel (op 53).
+/// Cancel (op 53): the gsmSCF cancels an announcement or all requests.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 #[rasn(choice)]
 pub enum CancelArg {
@@ -280,6 +270,9 @@ pub enum CancelArg {
     InvokeId(Integer),
     #[rasn(tag(context, 1))]
     AllRequests(()),
+    /// Phase 4.
+    #[rasn(tag(context, 2))]
+    CallSegmentToCancel(CallSegmentToCancel),
 }
 
 // ── Event reporting ─────────────────────────────────────────────────────────
@@ -446,17 +439,139 @@ impl FurnishChargingInformationArg {
     }
 }
 
-// ── Specialised resources + call-to-resource (shared with INAP) ──────────────
+// ── Specialised resources ───────────────────────────────────────────────────
 
-// These user-interaction operations are byte-identical between CAP and INAP
-// CS-2, so they are re-exported from the canonical `inap` crate rather than
-// duplicated: `ConnectToResourceArg` (op 19), `PlayAnnouncementArg` (op 47) and
-// `PromptAndCollectUserInformationArg` / `…Res` (op 48). Same field names, tags
-// and wire encoding.
-pub use inap::operations::{
-    ConnectToResourceArg, PlayAnnouncementArg, PromptAndCollectUserInformationArg,
-    PromptAndCollectUserInformationRes,
-};
+/// ConnectToResource (op 19): the gsmSCF connects the call to a gsmSRF.
+///
+/// ```text
+/// ConnectToResourceArg ::= SEQUENCE {
+///   resourceAddress CHOICE {                -- untagged: the alternative's tag shows
+///     ipRoutingAddress [0] IPRoutingAddress,
+///     none             [3] NULL },
+///   extensions                      [4]  Extensions OPTIONAL,
+///   serviceInteractionIndicatorsTwo [7]  ServiceInteractionIndicatorsTwo OPTIONAL,
+///   callSegmentID                   [50] CallSegmentID OPTIONAL,
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct ConnectToResourceArg {
+    pub resource_address: ResourceAddress,
+    #[rasn(tag(context, 4))]
+    pub extensions: Option<Extensions>,
+    #[rasn(tag(context, 7))]
+    pub service_interaction_indicators_two: Option<ServiceInteractionIndicatorsTwo>,
+    #[rasn(tag(context, 50))]
+    pub call_segment_id: Option<u8>,
+}
+
+impl ConnectToResourceArg {
+    /// A ConnectToResource to `resource_address` with every optional member
+    /// absent.
+    pub fn new(resource_address: ResourceAddress) -> Self {
+        Self {
+            resource_address,
+            extensions: None,
+            service_interaction_indicators_two: None,
+            call_segment_id: None,
+        }
+    }
+}
+
+/// PlayAnnouncement (op 47): the gsmSCF has the gsmSRF play something.
+///
+/// ```text
+/// PlayAnnouncementArg ::= SEQUENCE {
+///   informationToSend                       [0]  InformationToSend,   -- CHOICE: explicit
+///   disconnectFromIPForbidden               [1]  BOOLEAN DEFAULT TRUE,
+///   requestAnnouncementCompleteNotification [2]  BOOLEAN DEFAULT TRUE,
+///   extensions                              [3]  Extensions OPTIONAL,
+///   callSegmentID                           [5]  CallSegmentID OPTIONAL,
+///   requestAnnouncementStartedNotification  [51] BOOLEAN DEFAULT FALSE,
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct PlayAnnouncementArg {
+    #[rasn(tag(explicit(context, 0)))]
+    pub information_to_send: InformationToSend,
+    /// `DEFAULT TRUE`.
+    #[rasn(tag(context, 1))]
+    pub disconnect_from_ip_forbidden: Option<bool>,
+    /// `DEFAULT TRUE`.
+    #[rasn(tag(context, 2))]
+    pub request_announcement_complete_notification: Option<bool>,
+    #[rasn(tag(context, 3))]
+    pub extensions: Option<Extensions>,
+    #[rasn(tag(context, 5))]
+    pub call_segment_id: Option<u8>,
+    /// `DEFAULT FALSE`. Phase 4.
+    #[rasn(tag(context, 51))]
+    pub request_announcement_started_notification: Option<bool>,
+}
+
+impl PlayAnnouncementArg {
+    /// A PlayAnnouncement of `information_to_send` with every optional member
+    /// absent.
+    pub fn new(information_to_send: InformationToSend) -> Self {
+        Self {
+            information_to_send,
+            disconnect_from_ip_forbidden: None,
+            request_announcement_complete_notification: None,
+            extensions: None,
+            call_segment_id: None,
+            request_announcement_started_notification: None,
+        }
+    }
+}
+
+/// PromptAndCollectUserInformation (op 48): the gsmSCF has the gsmSRF collect
+/// digits.
+///
+/// ```text
+/// PromptAndCollectUserInformationArg ::= SEQUENCE {
+///   collectedInfo                          [0]  CollectedInfo,               -- CHOICE: explicit
+///   disconnectFromIPForbidden              [1]  BOOLEAN DEFAULT TRUE,
+///   informationToSend                      [2]  InformationToSend OPTIONAL,  -- CHOICE: explicit
+///   extensions                             [3]  Extensions OPTIONAL,
+///   callSegmentID                          [4]  CallSegmentID OPTIONAL,
+///   requestAnnouncementStartedNotification [51] BOOLEAN DEFAULT FALSE,
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct PromptAndCollectUserInformationArg {
+    #[rasn(tag(explicit(context, 0)))]
+    pub collected_info: CollectedInfo,
+    /// `DEFAULT TRUE`.
+    #[rasn(tag(context, 1))]
+    pub disconnect_from_ip_forbidden: Option<bool>,
+    #[rasn(tag(explicit(context, 2)))]
+    pub information_to_send: Option<InformationToSend>,
+    #[rasn(tag(context, 3))]
+    pub extensions: Option<Extensions>,
+    #[rasn(tag(context, 4))]
+    pub call_segment_id: Option<u8>,
+    /// `DEFAULT FALSE`. Phase 4.
+    #[rasn(tag(context, 51))]
+    pub request_announcement_started_notification: Option<bool>,
+}
+
+impl PromptAndCollectUserInformationArg {
+    /// A request for `collected_info` with every optional member absent.
+    pub fn new(collected_info: CollectedInfo) -> Self {
+        Self {
+            collected_info,
+            disconnect_from_ip_forbidden: None,
+            information_to_send: None,
+            extensions: None,
+            call_segment_id: None,
+            request_announcement_started_notification: None,
+        }
+    }
+}
+
+/// The result of PromptAndCollectUserInformation, `ReceivedInformationArg ::=
+/// CHOICE { digitsResponse [0] Digits }`. Identical in INAP, re-exported from
+/// the `inap` crate.
+pub use inap::operations::PromptAndCollectUserInformationRes;
 
 // ── CAMEL for SMS (CAP v3+) ─────────────────────────────────────────────────
 

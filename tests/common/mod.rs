@@ -182,7 +182,7 @@ impl Dissection {
             let bad_name = name.starts_with("_ws.malformed")
                 || name.starts_with("_ws.expert")
                 || name.starts_with("_ws.unreassembled")
-                || name.contains(".error")
+                || name.starts_with("ber.error")
                 || name.contains("unknown");
             let label = f.showname.to_ascii_lowercase();
             let bad_label = label.contains("malformed")
