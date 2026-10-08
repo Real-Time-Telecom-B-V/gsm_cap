@@ -319,3 +319,239 @@ fn subscriber_state_alternatives() {
         d.present("camel.subscriberState");
     }
 }
+
+// ── Extensions and the last optional members ────────────────────────────────
+//
+// `Extensions` sits on a different tag in almost every argument. One
+// ExtensionField is used throughout:
+//
+//   30 08  02 01 01  a1 03 01 01 ff     { type local 1, value [1] EXPLICIT BOOLEAN TRUE }
+
+fn extension() -> ExtensionField {
+    ExtensionField {
+        extension_type: Code::Local(Integer::from(1)),
+        criticality: None,
+        value: Any::new(vec![0x01, 0x01, 0xff]),
+    }
+}
+
+#[test]
+fn extensions_sit_on_the_tag_each_argument_gives_them() {
+    use gsm_cap::operations::{
+        ApplyChargingArg, ApplyChargingReportArg, ConnectToResourceArg, EventReportSmsArg,
+        PlayAnnouncementArg, PromptAndCollectUserInformationArg,
+    };
+    use gsm_cap::types::{
+        CamelAChBillingChargingCharacteristics, CamelCallResult, CollectedDigits, CollectedInfo,
+        EventTypeSms, InformationToSend, ReceivingSideId, ResourceAddress, TimeDurationCharging,
+        TimeDurationChargingResult, TimeInformation, Tone,
+    };
+
+    // EventReportBCSM: extensions [5].
+    let ber = known_answer(
+        &EventReportBcsmArg {
+            extensions: Some(vec![extension()]),
+            ..EventReportBcsmArg::new(EventTypeBcsm::OAnswer)
+        },
+        "30 0f  80 01 07  a5 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    if let Some(d) = dissect(op_codes::EVENT_REPORT_BCSM, Some(&ber), Carrier::Continue) {
+        d.show("camel.extensions", "1")
+            .show("camel.extension_code_local", "1");
+    }
+
+    // ApplyCharging: extensions [3], and inside the characteristics [4].
+    let characteristics =
+        CamelAChBillingChargingCharacteristics::TimeDurationCharging(TimeDurationCharging {
+            extensions: Some(vec![extension()]),
+            ..TimeDurationCharging::new(3000)
+        });
+    known_answer(
+        &characteristics,
+        "a0 10  80 02 0b b8  a4 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    let ber = known_answer(
+        &ApplyChargingArg {
+            extensions: Some(vec![extension()]),
+            ..ApplyChargingArg::new(vector("a0 04 80 02 0b b8").into())
+        },
+        "30 14  80 06 a0 04 80 02 0b b8  a3 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    let context = ac::object_identifier(&ac::CAP_V4_GSMSSF_SCF_GENERIC);
+    if let Some(d) = dissect(
+        op_codes::APPLY_CHARGING,
+        Some(&ber),
+        Carrier::Begin(&context),
+    ) {
+        d.show("camel.maxCallPeriodDuration", "3000")
+            .show("camel.extensions", "1");
+    }
+
+    // ApplyChargingReport: extensions [4] inside the call result.
+    let report = ApplyChargingReportArg::from_call_result(
+        &CamelCallResult::TimeDurationChargingResult(TimeDurationChargingResult {
+            extensions: Some(vec![extension()]),
+            ..TimeDurationChargingResult::new(
+                ReceivingSideId::leg(LEG1),
+                TimeInformation::TimeIfNoTariffSwitch(10),
+            )
+        }),
+    )
+    .unwrap();
+    let ber = known_answer(
+        &report,
+        "
+        04 18
+           a0 16                               -- 5 + 5 + 12 = 22
+              a0 03 81 01 01                   -- partyToCharge: receivingSideID leg1
+              a1 03 80 01 0a                   -- timeIfNoTariffSwitch 10
+              a4 0a 30 08 02 01 01 a1 03 01 01 ff  -- extensions [4]
+        ",
+    );
+    if let Some(d) = dissect(
+        op_codes::APPLY_CHARGING_REPORT,
+        Some(&ber),
+        Carrier::Begin(&context),
+    ) {
+        d.show("camel.timeIfNoTariffSwitch", "10")
+            .show("camel.extensions", "1");
+    }
+
+    // PlayAnnouncement: extensions [3].
+    let tone = || {
+        InformationToSend::Tone(Tone {
+            tone_id: 1,
+            duration: Some(5),
+        })
+    };
+    let ber = known_answer(
+        &PlayAnnouncementArg {
+            extensions: Some(vec![extension()]),
+            ..PlayAnnouncementArg::new(tone())
+        },
+        "30 16  a0 08 a1 06 80 01 01 81 01 05  a3 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    if let Some(d) = dissect(op_codes::PLAY_ANNOUNCEMENT, Some(&ber), Carrier::Continue) {
+        d.show("camel.toneID", "1").show("camel.extensions", "1");
+    }
+
+    // PromptAndCollectUserInformation: extensions [3].
+    let ber = known_answer(
+        &PromptAndCollectUserInformationArg {
+            extensions: Some(vec![extension()]),
+            ..PromptAndCollectUserInformationArg::new(CollectedInfo::CollectedDigits(
+                CollectedDigits::new(4),
+            ))
+        },
+        "
+        30 13
+           a0 05 a0 03 81 01 04                -- collectedInfo { collectedDigits { maximumNbOfDigits 4 } }
+           a3 0a 30 08 02 01 01 a1 03 01 01 ff -- extensions [3]
+        ",
+    );
+    if let Some(d) = dissect(
+        op_codes::PROMPT_AND_COLLECT_USER_INFORMATION,
+        Some(&ber),
+        Carrier::Continue,
+    ) {
+        d.show("camel.maximumNbOfDigits", "4")
+            .absent("camel.minimumNbOfDigits")
+            .show("camel.extensions", "1");
+    }
+
+    // ConnectToResource: extensions [4].
+    let ber = known_answer(
+        &ConnectToResourceArg {
+            extensions: Some(vec![extension()]),
+            ..ConnectToResourceArg::new(ResourceAddress::None(()))
+        },
+        "30 0e  83 00  a4 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    if let Some(d) = dissect(op_codes::CONNECT_TO_RESOURCE, Some(&ber), Carrier::Continue) {
+        d.present("camel.none_element")
+            .show("camel.extensions", "1");
+    }
+
+    // EventReportSMS: extensions [10].
+    let ber = known_answer(
+        &EventReportSmsArg {
+            extensions: Some(vec![extension()]),
+            ..EventReportSmsArg::new(EventTypeSms::OSmsSubmission)
+        },
+        "30 0f  80 01 03  aa 0a 30 08 02 01 01 a1 03 01 01 ff",
+    );
+    if let Some(d) = dissect(op_codes::EVENT_REPORT_SMS, Some(&ber), Carrier::Continue) {
+        d.show("camel.eventTypeSMS", "3")
+            .show("camel.extensions", "1");
+    }
+}
+
+#[test]
+fn remaining_interaction_and_mid_call_members() {
+    use gsm_cap::operations::ConnectToResourceArg;
+    use gsm_cap::types::{
+        BackwardServiceInteractionInd, ForwardServiceInteractionInd, MidCallControlInfo,
+        ResourceAddress, ServiceInteractionIndicatorsTwo,
+    };
+
+    let ber = known_answer(
+        &ConnectToResourceArg {
+            service_interaction_indicators_two: Some(ServiceInteractionIndicatorsTwo {
+                forward_service_interaction_ind: Some(ForwardServiceInteractionInd {
+                    calling_party_restriction_indicator: Some(vec![0x01].into()),
+                    ..Default::default()
+                }),
+                backward_service_interaction_ind: Some(BackwardServiceInteractionInd {
+                    call_completion_treatment_indicator: Some(vec![0x01].into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..ConnectToResourceArg::new(ResourceAddress::None(()))
+        },
+        "
+        30 0e
+           83 00                               -- none [3] NULL
+           a7 0a                               -- serviceInteractionIndicatorsTwo [7]
+              a0 03 84 01 01                   --   forward: callingPartyRestrictionIndicator [4]
+              a1 03 82 01 01                   --   backward: callCompletionTreatmentIndicator [2]
+        ",
+    );
+    if let Some(d) = dissect(op_codes::CONNECT_TO_RESOURCE, Some(&ber), Carrier::Continue) {
+        d.hex("camel.callingPartyRestrictionIndicator", "01")
+            .hex("camel.callCompletionTreatmentIndicator", "01");
+    }
+
+    let ber = known_answer(
+        &RequestReportBcsmEventArg::new(vec![BcsmEvent {
+            dp_specific_criteria: Some(DpSpecificCriteria::MidCallControlInfo(
+                MidCallControlInfo {
+                    cancel_digit: Some(vec![0x0b].into()),
+                    start_digit: Some(vec![0x0c].into()),
+                    ..Default::default()
+                },
+            )),
+            ..BcsmEvent::new(EventTypeBcsm::TMidCall, MonitorMode::NotifyAndContinue)
+        }]),
+        "
+        30 14
+           a0 12
+              30 10                            -- 3 + 3 + 10
+                 80 01 10                      -- tMidCall(16)
+                 81 01 01                      -- notifyAndContinue
+                 be 08                         -- dpSpecificCriteria [30] EXPLICIT
+                    a2 06                      --   midCallControlInfo [2]
+                       83 01 0b                --     cancelDigit [3] '*'
+                       84 01 0c                --     startDigit [4] '#'
+        ",
+    );
+    if let Some(d) = dissect(
+        op_codes::REQUEST_REPORT_BCSM_EVENT,
+        Some(&ber),
+        Carrier::Continue,
+    ) {
+        d.show("camel.eventTypeBCSM", "16")
+            .hex("camel.cancelDigit", "0b")
+            .hex("camel.startDigit", "0c");
+    }
+}
