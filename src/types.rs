@@ -296,6 +296,11 @@ pub enum ChangeOfLocation {
 #[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct DpSpecificCriteriaAlt {
     /// ChangeOfPositionControlInfo.
+    ///
+    /// The published ASN.1 (every release from 7 to 18) lists this member
+    /// without `OPTIONAL`, although a digit-count criterion has no position
+    /// list to send. It is optional here so both forms decode; a peer
+    /// generated from the ASN.1 may insist on it, and Wireshark does.
     #[rasn(tag(context, 0))]
     pub change_of_position_control_info: Option<Vec<ChangeOfLocation>>,
     #[rasn(tag(context, 1))]
