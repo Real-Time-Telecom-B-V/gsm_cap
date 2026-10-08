@@ -445,7 +445,34 @@ pub fn assert_clean(dissection: &Dissection, operation: i64) {
     );
 }
 
-/// Lowercase hex of `bytes`, to compare against [`Field::value`].
-pub fn hex(bytes: &[u8]) -> String {
-    hex::encode(bytes)
+/// Bytes of a hand-written vector: hex octets, free whitespace, and `--`
+/// comments running to the end of the line.
+pub fn vector(text: &str) -> Vec<u8> {
+    let octets: String = text
+        .lines()
+        .map(|line| line.split("--").next().unwrap_or(""))
+        .flat_map(str::split_whitespace)
+        .collect();
+    hex::decode(&octets).unwrap_or_else(|e| panic!("bad hex in vector ({e}): {octets}"))
+}
+
+/// The known-answer check, both directions, against a vector that was
+/// assembled by hand from the ASN.1 and not produced by this crate:
+/// `value` must encode to exactly those bytes, and those bytes must decode to
+/// exactly `value`. Returns the bytes.
+#[track_caller]
+pub fn known_answer<T>(value: &T, hand_assembled: &str) -> Vec<u8>
+where
+    T: rasn::Encode + rasn::Decode + PartialEq + std::fmt::Debug,
+{
+    let expected = vector(hand_assembled);
+    let encoded = gsm_cap::encode(value).expect("encode");
+    assert_eq!(
+        hex::encode(&encoded),
+        hex::encode(&expected),
+        "encoding differs from the hand-assembled vector"
+    );
+    let decoded: T = gsm_cap::decode(&expected).expect("decode the hand-assembled vector");
+    assert_eq!(&decoded, value, "decoding the hand-assembled vector");
+    expected
 }

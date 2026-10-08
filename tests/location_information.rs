@@ -7,7 +7,7 @@
 
 mod common;
 
-use common::{dissect, Carrier};
+use common::{dissect, known_answer, vector, Carrier};
 use gsm_cap::application_context as ac;
 use gsm_cap::op_codes;
 use gsm_cap::operations::InitialDpArg;
@@ -18,7 +18,7 @@ use gsm_cap::types::{
 use rasn::types::{BitString, Integer, ObjectIdentifier};
 
 fn unhex(text: &str) -> Vec<u8> {
-    hex::decode(text.split_whitespace().collect::<String>()).expect("hex")
+    vector(text)
 }
 
 /// Every member of LocationInformation, hand-assembled from the ASN.1:
@@ -71,15 +71,6 @@ const FULL: &str = "
           83 01 01                            --     [3] CSG membership indication
 ";
 
-fn strip_comments(text: &str) -> Vec<u8> {
-    let without: String = text
-        .lines()
-        .map(|line| line.split("--").next().unwrap_or(""))
-        .collect::<Vec<_>>()
-        .join(" ");
-    unhex(&without)
-}
-
 fn full() -> LocationInformation {
     let mut csg_id = BitString::from_vec(vec![0x00, 0x00, 0x00, 0x20]);
     csg_id.truncate(27);
@@ -122,17 +113,8 @@ fn full() -> LocationInformation {
 }
 
 #[test]
-fn encodes_every_member_to_the_hand_derived_bytes() {
-    assert_eq!(
-        hex::encode(gsm_cap::encode(&full()).unwrap()),
-        hex::encode(strip_comments(FULL))
-    );
-}
-
-#[test]
-fn decodes_the_hand_assembled_bytes() {
-    let decoded: LocationInformation = gsm_cap::decode(&strip_comments(FULL)).unwrap();
-    assert_eq!(decoded, full());
+fn every_member_matches_the_hand_assembled_bytes() {
+    known_answer(&full(), FULL);
 }
 
 #[test]
@@ -173,19 +155,8 @@ fn rejects_the_encoding_this_crate_used_to_emit() {
 #[test]
 fn wireshark_reads_back_every_member() {
     let idp = InitialDpArg {
-        service_key: Integer::from(1),
-        called_party_number: None,
-        calling_party_number: None,
-        calling_partys_category: None,
-        original_called_party_id: None,
-        event_type_bcsm: None,
-        redirecting_party_id: None,
-        imsi: None,
         location_information: Some(full()),
-        call_reference_number: None,
-        msc_address: None,
-        called_party_bcd_number: None,
-        time_and_timezone: None,
+        ..InitialDpArg::new(Integer::from(1))
     };
     let ber = gsm_cap::encode(&idp).unwrap();
     let context = ac::object_identifier(&ac::CAP_V4_GSMSSF_SCF_GENERIC);

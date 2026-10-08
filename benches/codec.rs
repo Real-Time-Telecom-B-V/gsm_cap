@@ -12,46 +12,33 @@ use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughpu
 use rasn::types::Integer;
 
 use gsm_cap::operations::{ConnectArg, EventReportBcsmArg, InitialDpArg};
-use gsm_cap::types::EventTypeBcsm;
+use gsm_cap::types::{EventTypeBcsm, ReceivingSideId, LEG2};
 
 /// A representative InitialDP (gsmSSF → gsmSCF): service key + a handful of the
 /// common optional fields populated with synthetic wire bytes.
 fn sample_initial_dp() -> InitialDpArg {
     InitialDpArg {
-        service_key: Integer::from(42),
         called_party_number: Some(vec![0x03, 0x55, 0x01, 0x23].into()),
         calling_party_number: Some(vec![0x03, 0x55, 0x01, 0x99].into()),
-        calling_partys_category: None,
-        original_called_party_id: None,
         event_type_bcsm: Some(EventTypeBcsm::CollectedInfo),
-        redirecting_party_id: None,
         imsi: Some(vec![0x00, 0x10, 0x19, 0x00, 0x00].into()),
-        location_information: None,
         call_reference_number: Some(vec![0xDE, 0xAD, 0xBE, 0xEF].into()),
         msc_address: Some(vec![0x91, 0x55, 0x01, 0x00].into()),
-        called_party_bcd_number: None,
-        time_and_timezone: None,
+        ..InitialDpArg::new(Integer::from(42))
     }
 }
 
 /// A representative Connect (gsmSCF → gsmSSF): a single destination routing
 /// address.
 fn sample_connect() -> ConnectArg {
-    ConnectArg {
-        destination_routing_address: vec![vec![0x03, 0x55, 0x01, 0x23].into()],
-        original_called_party_id: None,
-        calling_partys_category: None,
-        redirecting_party_id: None,
-        generic_numbers: None,
-    }
+    ConnectArg::new(vec![0x03, 0x55, 0x01, 0x23].into())
 }
 
 /// A representative EventReportBCSM (gsmSSF → gsmSCF): an O-Answer report.
 fn sample_event_report() -> EventReportBcsmArg {
     EventReportBcsmArg {
-        event_type_bcsm: EventTypeBcsm::OAnswer,
-        leg_id: Some(vec![0x02].into()),
-        misc_call_info: None,
+        leg_id: Some(ReceivingSideId::leg(LEG2)),
+        ..EventReportBcsmArg::new(EventTypeBcsm::OAnswer)
     }
 }
 

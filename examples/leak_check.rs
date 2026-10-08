@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use rasn::types::Integer;
 
 use gsm_cap::operations::{ConnectArg, EventReportBcsmArg, InitialDpArg, InitialDpSmsArg};
-use gsm_cap::types::{EventTypeBcsm, EventTypeSms};
+use gsm_cap::types::{EventTypeBcsm, EventTypeSms, ReceivingSideId, LEG2};
 
 // ── Counting allocator ──────────────────────────────────────────────────────
 static LIVE: AtomicI64 = AtomicI64::new(0);
@@ -63,58 +63,35 @@ fn live() -> i64 {
 // ── Synthetic fixtures ───────────────────────────────────────────────────────
 fn sample_initial_dp() -> InitialDpArg {
     InitialDpArg {
-        service_key: Integer::from(42),
         called_party_number: Some(vec![0x03, 0x55, 0x01, 0x23].into()),
         calling_party_number: Some(vec![0x03, 0x55, 0x01, 0x99].into()),
-        calling_partys_category: None,
-        original_called_party_id: None,
         event_type_bcsm: Some(EventTypeBcsm::CollectedInfo),
-        redirecting_party_id: None,
         imsi: Some(vec![0x00, 0x10, 0x19, 0x00, 0x00].into()),
-        location_information: None,
         call_reference_number: Some(vec![0xDE, 0xAD, 0xBE, 0xEF].into()),
         msc_address: Some(vec![0x91, 0x55, 0x01, 0x00].into()),
-        called_party_bcd_number: None,
-        time_and_timezone: None,
+        ..InitialDpArg::new(Integer::from(42))
     }
 }
 
 fn sample_connect() -> ConnectArg {
-    ConnectArg {
-        destination_routing_address: vec![vec![0x03, 0x55, 0x01, 0x23].into()],
-        original_called_party_id: None,
-        calling_partys_category: None,
-        redirecting_party_id: None,
-        generic_numbers: None,
-    }
+    ConnectArg::new(vec![0x03, 0x55, 0x01, 0x23].into())
 }
 
 fn sample_event_report() -> EventReportBcsmArg {
     EventReportBcsmArg {
-        event_type_bcsm: EventTypeBcsm::OAnswer,
-        leg_id: Some(vec![0x02].into()),
-        misc_call_info: None,
+        leg_id: Some(ReceivingSideId::leg(LEG2)),
+        ..EventReportBcsmArg::new(EventTypeBcsm::OAnswer)
     }
 }
 
 fn sample_initial_dp_sms() -> InitialDpSmsArg {
     InitialDpSmsArg {
-        service_key: Integer::from(7),
         destination_subscriber_number: Some(vec![0x91, 0x55, 0x01, 0x23].into()),
         calling_party_number: Some(vec![0x91, 0x55, 0x01, 0x88].into()),
         event_type_sms: Some(EventTypeSms::OSmsSubmission),
         imsi: Some(vec![0x00, 0x10, 0x19, 0x00, 0x00].into()),
-        location_information_msc: None,
         smsc_address: Some(vec![0x91, 0x55, 0x01, 0x00].into()),
-        time_and_timezone: None,
-        tp_short_message_specific_info: None,
-        tp_protocol_identifier: None,
-        tp_data_coding_scheme: None,
-        tp_validity_period: None,
-        sms_reference_number: None,
-        msc_address: None,
-        sgsn_number: None,
-        ms_classmark2: None,
+        ..InitialDpSmsArg::new(Integer::from(7))
     }
 }
 

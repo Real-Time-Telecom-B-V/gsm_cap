@@ -6,8 +6,9 @@ use rasn::prelude::*;
 
 use crate::types::{
     BcsmEvent, CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber, CallingPartyNumber,
-    Cause, EventTypeBcsm, EventTypeSms, Imsi, IsdnAddressString, LocationInformation,
-    OriginalCalledPartyId, RedirectingPartyId, ServiceKey, SmsEvent,
+    Cause, EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, Extensions, Imsi,
+    IsdnAddressString, LocationInformation, MiscCallInfo, OriginalCalledPartyId, ReceivingSideId,
+    RedirectingPartyId, ServiceKey, SmsEvent,
 };
 
 // ── Call control ────────────────────────────────────────────────────────────
@@ -44,6 +45,27 @@ pub struct InitialDpArg {
     pub time_and_timezone: Option<OctetString>,
 }
 
+impl InitialDpArg {
+    /// An InitialDP for `service_key` with every optional member absent.
+    pub fn new(service_key: ServiceKey) -> Self {
+        Self {
+            service_key,
+            called_party_number: None,
+            calling_party_number: None,
+            calling_partys_category: None,
+            original_called_party_id: None,
+            event_type_bcsm: None,
+            redirecting_party_id: None,
+            imsi: None,
+            location_information: None,
+            call_reference_number: None,
+            msc_address: None,
+            called_party_bcd_number: None,
+            time_and_timezone: None,
+        }
+    }
+}
+
 /// Connect (op 20) — gsmSCF instructs the gsmSSF to route the call.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct ConnectArg {
@@ -57,6 +79,19 @@ pub struct ConnectArg {
     pub redirecting_party_id: Option<RedirectingPartyId>,
     #[rasn(tag(context, 11))]
     pub generic_numbers: Option<Vec<OctetString>>,
+}
+
+impl ConnectArg {
+    /// A Connect to `destination` with every optional member absent.
+    pub fn new(destination: CalledPartyNumber) -> Self {
+        Self {
+            destination_routing_address: vec![destination],
+            original_called_party_id: None,
+            calling_partys_category: None,
+            redirecting_party_id: None,
+            generic_numbers: None,
+        }
+    }
 }
 
 /// ReleaseCall (op 22) — gsmSCF instructs the gsmSSF to release the call. In CAP
@@ -80,22 +115,62 @@ pub enum CancelArg {
 
 // ── Event reporting ─────────────────────────────────────────────────────────
 
-/// RequestReportBCSMEvent (op 23).
+/// RequestReportBCSMEvent (op 23): the gsmSCF arms detection points.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct RequestReportBcsmEventArg {
     #[rasn(tag(context, 0))]
     pub bcsm_events: Vec<BcsmEvent>,
+    #[rasn(tag(context, 2))]
+    pub extensions: Option<Extensions>,
 }
 
-/// EventReportBCSM (op 24) — gsmSSF reports a BCSM event to the gsmSCF.
+impl RequestReportBcsmEventArg {
+    /// An argument arming `bcsm_events`, without extensions.
+    pub fn new(bcsm_events: Vec<BcsmEvent>) -> Self {
+        Self {
+            bcsm_events,
+            extensions: None,
+        }
+    }
+}
+
+/// EventReportBCSM (op 24): the gsmSSF reports a detection point.
+///
+/// ```text
+/// EventReportBCSMArg ::= SEQUENCE {
+///   eventTypeBCSM                [0] EventTypeBCSM,
+///   eventSpecificInformationBCSM [2] EventSpecificInformationBCSM OPTIONAL,  -- CHOICE: explicit
+///   legID                        [3] ReceivingSideID OPTIONAL,               -- CHOICE: explicit
+///   miscCallInfo                 [4] MiscCallInfo DEFAULT {messageType request},
+///   extensions                   [5] Extensions OPTIONAL,
+///   ...}
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct EventReportBcsmArg {
     #[rasn(tag(context, 0))]
     pub event_type_bcsm: EventTypeBcsm,
-    #[rasn(tag(context, 2))]
-    pub leg_id: Option<OctetString>,
-    #[rasn(tag(context, 3))]
-    pub misc_call_info: Option<OctetString>,
+    #[rasn(tag(explicit(context, 2)))]
+    pub event_specific_information_bcsm: Option<EventSpecificInformationBcsm>,
+    #[rasn(tag(explicit(context, 3)))]
+    pub leg_id: Option<ReceivingSideId>,
+    /// `DEFAULT {messageType request}`.
+    #[rasn(tag(context, 4))]
+    pub misc_call_info: Option<MiscCallInfo>,
+    #[rasn(tag(context, 5))]
+    pub extensions: Option<Extensions>,
+}
+
+impl EventReportBcsmArg {
+    /// A report of `event_type_bcsm` with every optional member absent.
+    pub fn new(event_type_bcsm: EventTypeBcsm) -> Self {
+        Self {
+            event_type_bcsm,
+            event_specific_information_bcsm: None,
+            leg_id: None,
+            misc_call_info: None,
+            extensions: None,
+        }
+    }
 }
 
 // ── Charging ────────────────────────────────────────────────────────────────
@@ -107,6 +182,17 @@ pub struct ApplyChargingArg {
     pub ach_billing_charging_characteristics: OctetString,
     #[rasn(tag(context, 2))]
     pub party_to_charge: Option<OctetString>,
+}
+
+impl ApplyChargingArg {
+    /// An ApplyCharging carrying `characteristics` with every optional member
+    /// absent.
+    pub fn new(characteristics: OctetString) -> Self {
+        Self {
+            ach_billing_charging_characteristics: characteristics,
+            party_to_charge: None,
+        }
+    }
 }
 
 /// ApplyChargingReport (op 36).
@@ -171,6 +257,30 @@ pub struct InitialDpSmsArg {
     pub sgsn_number: Option<IsdnAddressString>,
     #[rasn(tag(context, 16))]
     pub ms_classmark2: Option<OctetString>,
+}
+
+impl InitialDpSmsArg {
+    /// An InitialDPSMS for `service_key` with every optional member absent.
+    pub fn new(service_key: ServiceKey) -> Self {
+        Self {
+            service_key,
+            destination_subscriber_number: None,
+            calling_party_number: None,
+            event_type_sms: None,
+            imsi: None,
+            location_information_msc: None,
+            smsc_address: None,
+            time_and_timezone: None,
+            tp_short_message_specific_info: None,
+            tp_protocol_identifier: None,
+            tp_data_coding_scheme: None,
+            tp_validity_period: None,
+            sms_reference_number: None,
+            msc_address: None,
+            sgsn_number: None,
+            ms_classmark2: None,
+        }
+    }
 }
 
 /// ConnectSMS (op 61).

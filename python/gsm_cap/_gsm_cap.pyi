@@ -36,14 +36,22 @@ class EventTypeBcsm:
     OCalledPartyBusy: EventTypeBcsm
     ONoAnswer: EventTypeBcsm
     OAnswer: EventTypeBcsm
+    OMidCall: EventTypeBcsm
     ODisconnect: EventTypeBcsm
     OAbandon: EventTypeBcsm
     TermAttemptAuthorized: EventTypeBcsm
     TBusy: EventTypeBcsm
     TNoAnswer: EventTypeBcsm
     TAnswer: EventTypeBcsm
+    TMidCall: EventTypeBcsm
     TDisconnect: EventTypeBcsm
     TAbandon: EventTypeBcsm
+    OTermSeized: EventTypeBcsm
+    CallAccepted: EventTypeBcsm
+    OChangeOfPosition: EventTypeBcsm
+    TChangeOfPosition: EventTypeBcsm
+    OServiceChange: EventTypeBcsm
+    TServiceChange: EventTypeBcsm
     def __int__(self) -> int: ...
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
@@ -72,17 +80,27 @@ class EventTypeSms:
     def __hash__(self) -> int: ...
 
 class BcsmEvent:
-    """One event detection-point configuration entry."""
+    """One event detection-point configuration entry.
+
+    ``legID`` is a CHOICE on the wire: pass the one-octet leg (``b"\\x01"`` or
+    ``b"\\x02"``) as ``sending_side_id`` (what a gsmSCF uses) or as
+    ``receiving_side_id``, never both (``ValueError``). ``application_timer``
+    is the no-answer timer in seconds.
+    """
 
     event_type_bcsm: EventTypeBcsm
     monitor_mode: MonitorMode
-    leg_id: Optional[bytes]
+    sending_side_id: Optional[bytes]
+    receiving_side_id: Optional[bytes]
+    application_timer: Optional[int]
     def __init__(
         self,
         event_type_bcsm: EventTypeBcsm,
         monitor_mode: MonitorMode,
         *,
-        leg_id: Optional[bytes] = ...,
+        sending_side_id: Optional[bytes] = ...,
+        receiving_side_id: Optional[bytes] = ...,
+        application_timer: Optional[int] = ...,
     ) -> None: ...
 
 class InitialDpArg:
@@ -138,17 +156,22 @@ class RequestReportBcsmEventArg:
     def decode(cls, data: bytes) -> RequestReportBcsmEventArg: ...
 
 class EventReportBcsmArg:
-    """EventReportBCSM argument (op 24) — gsmSSF → gsmSCF."""
+    """EventReportBCSM argument (op 24) — gsmSSF → gsmSCF.
+
+    ``receiving_side_id`` is the one-octet leg the event concerns.
+    ``message_type`` is 0 (request) or 1 (notification); ``None`` leaves
+    ``miscCallInfo`` out, which means request.
+    """
 
     event_type_bcsm: EventTypeBcsm
-    leg_id: Optional[bytes]
-    misc_call_info: Optional[bytes]
+    receiving_side_id: Optional[bytes]
+    message_type: Optional[int]
     def __init__(
         self,
         event_type_bcsm: EventTypeBcsm,
         *,
-        leg_id: Optional[bytes] = ...,
-        misc_call_info: Optional[bytes] = ...,
+        receiving_side_id: Optional[bytes] = ...,
+        message_type: Optional[int] = ...,
     ) -> None: ...
     def encode(self) -> bytes: ...
     @classmethod
