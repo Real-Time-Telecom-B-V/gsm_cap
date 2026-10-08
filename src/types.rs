@@ -572,6 +572,89 @@ pub enum EventSpecificInformationBcsm {
     DpSpecificInfoAlt(DpSpecificInfoAlt),
 }
 
+// ── Call routing ────────────────────────────────────────────────────────────
+
+/// AlertingPattern, 3 octets; only the last is used (TS 29.002
+/// AlertingPattern).
+pub type AlertingPattern = OctetString;
+/// Carrier, 4 octets: carrier selection then the carrier identity digits
+/// (ANSI T1.113).
+pub type Carrier = OctetString;
+/// CallingPartysCategory, 1 octet (Q.763).
+pub type CallingPartysCategory = OctetString;
+/// RedirectionInformation, 2 octets (Q.763).
+pub type RedirectionInformation = OctetString;
+/// GenericNumber (Q.763 generic number, number qualifier first).
+pub type GenericNumber = OctetString;
+/// GenericNumbers: `SET SIZE (1..numOfGenericNumbers) OF GenericNumber`.
+pub type GenericNumbers = SetOf<GenericNumber>;
+/// ChargeNumber, in LocationNumber format.
+pub type ChargeNumber = OctetString;
+/// CUG-Interlock, 4 octets.
+pub type CugInterlock = OctetString;
+/// NAOliInfo, 1 octet (ANSI originating line information).
+pub type NaOliInfo = OctetString;
+
+/// ForwardServiceInteractionInd. Each member is one octet.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct ForwardServiceInteractionInd {
+    #[rasn(tag(context, 1))]
+    pub conference_treatment_indicator: Option<OctetString>,
+    #[rasn(tag(context, 2))]
+    pub call_diversion_treatment_indicator: Option<OctetString>,
+    #[rasn(tag(context, 4))]
+    pub calling_party_restriction_indicator: Option<OctetString>,
+}
+
+/// BackwardServiceInteractionInd. Each member is one octet.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct BackwardServiceInteractionInd {
+    #[rasn(tag(context, 1))]
+    pub conference_treatment_indicator: Option<OctetString>,
+    #[rasn(tag(context, 2))]
+    pub call_completion_treatment_indicator: Option<OctetString>,
+}
+
+/// BothwayThroughConnectionInd (CS2-datatypes).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum BothwayThroughConnectionInd {
+    BothwayPathRequired = 0,
+    BothwayPathNotRequired = 1,
+}
+
+/// ConnectedNumberTreatmentInd.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum ConnectedNumberTreatmentInd {
+    NoInImpact = 0,
+    PresentationRestricted = 1,
+    PresentCalledInNumber = 2,
+    PresentCallInNumberRestricted = 3,
+}
+
+/// ServiceInteractionIndicatorsTwo: how supplementary services interact with
+/// the CAMEL service.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct ServiceInteractionIndicatorsTwo {
+    #[rasn(tag(context, 0))]
+    pub forward_service_interaction_ind: Option<ForwardServiceInteractionInd>,
+    #[rasn(tag(context, 1))]
+    pub backward_service_interaction_ind: Option<BackwardServiceInteractionInd>,
+    #[rasn(tag(context, 2))]
+    pub bothway_through_connection_ind: Option<BothwayThroughConnectionInd>,
+    #[rasn(tag(context, 4))]
+    pub connected_number_treatment_ind: Option<ConnectedNumberTreatmentInd>,
+    #[rasn(tag(context, 13))]
+    pub non_cug_call: Option<()>,
+    #[rasn(tag(context, 50))]
+    pub hold_treatment_indicator: Option<OctetString>,
+    #[rasn(tag(context, 51))]
+    pub cw_treatment_indicator: Option<OctetString>,
+    #[rasn(tag(context, 52))]
+    pub ect_treatment_indicator: Option<OctetString>,
+}
+
 // ── MAP types CAP imports (3GPP TS 29.002 V18.0.0 clause 17.7) ───────────────
 //
 // The MAP modules are `DEFINITIONS IMPLICIT TAGS`, like the CAP ones. A tag in

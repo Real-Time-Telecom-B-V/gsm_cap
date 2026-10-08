@@ -5,10 +5,12 @@
 use rasn::prelude::*;
 
 use crate::types::{
-    BcsmEvent, CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber, CallingPartyNumber,
-    Cause, EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, Extensions, Imsi,
-    IsdnAddressString, LocationInformation, MiscCallInfo, OriginalCalledPartyId, ReceivingSideId,
-    RedirectingPartyId, ServiceKey, SmsEvent,
+    AlertingPattern, BcsmEvent, CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber,
+    CallingPartyNumber, CallingPartysCategory, Carrier, Cause, ChargeNumber, CugInterlock,
+    EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, Extensions, GenericNumbers, Imsi,
+    IsdnAddressString, LegId, LocationInformation, MiscCallInfo, NaOliInfo, OriginalCalledPartyId,
+    ReceivingSideId, RedirectingPartyId, RedirectionInformation, ServiceInteractionIndicatorsTwo,
+    ServiceKey, SmsEvent,
 };
 
 // ── Call control ────────────────────────────────────────────────────────────
@@ -66,19 +68,75 @@ impl InitialDpArg {
     }
 }
 
-/// Connect (op 20) — gsmSCF instructs the gsmSSF to route the call.
+/// Connect (op 20): the gsmSCF routes the call.
+///
+/// The members are encoded in the order the ASN.1 lists them, which is not
+/// ascending tag order: `[28] [29] [30]` come before `[14]`.
+///
+/// ```text
+/// ConnectArg ::= SEQUENCE {
+///   destinationRoutingAddress       [0]  DestinationRoutingAddress,
+///   alertingPattern                 [1]  AlertingPattern OPTIONAL,
+///   originalCalledPartyID           [6]  OriginalCalledPartyID OPTIONAL,
+///   extensions                      [10] Extensions OPTIONAL,
+///   carrier                         [11] Carrier OPTIONAL,
+///   callingPartysCategory           [28] CallingPartysCategory OPTIONAL,
+///   redirectingPartyID              [29] RedirectingPartyID OPTIONAL,
+///   redirectionInformation          [30] RedirectionInformation OPTIONAL,
+///   genericNumbers                  [14] GenericNumbers OPTIONAL,
+///   serviceInteractionIndicatorsTwo [15] ServiceInteractionIndicatorsTwo OPTIONAL,
+///   chargeNumber                    [19] ChargeNumber OPTIONAL,
+///   legToBeConnected                [21] LegID OPTIONAL,          -- CHOICE: explicit
+///   cug-Interlock                   [31] CUG-Interlock OPTIONAL,
+///   cug-OutgoingAccess              [32] NULL OPTIONAL,
+///   suppressionOfAnnouncement       [55] SuppressionOfAnnouncement OPTIONAL,
+///   oCSIApplicable                  [56] OCSIApplicable OPTIONAL,
+///   naOliInfo                       [57] NAOliInfo OPTIONAL,
+///   bor-InterrogationRequested      [58] NULL OPTIONAL,
+///   ...,
+///   suppress-N-CSI                  [59] NULL OPTIONAL }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct ConnectArg {
+    /// `SEQUENCE SIZE (1) OF CalledPartyNumber`: exactly one address.
     #[rasn(tag(context, 0))]
     pub destination_routing_address: Vec<CalledPartyNumber>,
-    #[rasn(tag(context, 4))]
-    pub original_called_party_id: Option<OriginalCalledPartyId>,
+    #[rasn(tag(context, 1))]
+    pub alerting_pattern: Option<AlertingPattern>,
     #[rasn(tag(context, 6))]
-    pub calling_partys_category: Option<OctetString>,
-    #[rasn(tag(context, 7))]
-    pub redirecting_party_id: Option<RedirectingPartyId>,
+    pub original_called_party_id: Option<OriginalCalledPartyId>,
+    #[rasn(tag(context, 10))]
+    pub extensions: Option<Extensions>,
     #[rasn(tag(context, 11))]
-    pub generic_numbers: Option<Vec<OctetString>>,
+    pub carrier: Option<Carrier>,
+    #[rasn(tag(context, 28))]
+    pub calling_partys_category: Option<CallingPartysCategory>,
+    #[rasn(tag(context, 29))]
+    pub redirecting_party_id: Option<RedirectingPartyId>,
+    #[rasn(tag(context, 30))]
+    pub redirection_information: Option<RedirectionInformation>,
+    #[rasn(tag(context, 14))]
+    pub generic_numbers: Option<GenericNumbers>,
+    #[rasn(tag(context, 15))]
+    pub service_interaction_indicators_two: Option<ServiceInteractionIndicatorsTwo>,
+    #[rasn(tag(context, 19))]
+    pub charge_number: Option<ChargeNumber>,
+    #[rasn(tag(explicit(context, 21)))]
+    pub leg_to_be_connected: Option<LegId>,
+    #[rasn(tag(context, 31))]
+    pub cug_interlock: Option<CugInterlock>,
+    #[rasn(tag(context, 32))]
+    pub cug_outgoing_access: Option<()>,
+    #[rasn(tag(context, 55))]
+    pub suppression_of_announcement: Option<()>,
+    #[rasn(tag(context, 56))]
+    pub o_csi_applicable: Option<()>,
+    #[rasn(tag(context, 57))]
+    pub na_oli_info: Option<NaOliInfo>,
+    #[rasn(tag(context, 58))]
+    pub bor_interrogation_requested: Option<()>,
+    #[rasn(tag(context, 59))]
+    pub suppress_n_csi: Option<()>,
 }
 
 impl ConnectArg {
@@ -86,10 +144,24 @@ impl ConnectArg {
     pub fn new(destination: CalledPartyNumber) -> Self {
         Self {
             destination_routing_address: vec![destination],
+            alerting_pattern: None,
             original_called_party_id: None,
+            extensions: None,
+            carrier: None,
             calling_partys_category: None,
             redirecting_party_id: None,
+            redirection_information: None,
             generic_numbers: None,
+            service_interaction_indicators_two: None,
+            charge_number: None,
+            leg_to_be_connected: None,
+            cug_interlock: None,
+            cug_outgoing_access: None,
+            suppression_of_announcement: None,
+            o_csi_applicable: None,
+            na_oli_info: None,
+            bor_interrogation_requested: None,
+            suppress_n_csi: None,
         }
     }
 }
