@@ -5,18 +5,58 @@
 use rasn::prelude::*;
 
 use crate::types::{
-    AlertingPattern, BcsmEvent, CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber,
-    CallingPartyNumber, CallingPartysCategory, Carrier, Cause, ChargeNumber, CugInterlock,
-    EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, Extensions, GenericNumbers, Imsi,
-    IsdnAddressString, LegId, LocationInformation, MiscCallInfo, NaOliInfo, OriginalCalledPartyId,
-    ReceivingSideId, RedirectingPartyId, RedirectionInformation, ServiceInteractionIndicatorsTwo,
-    ServiceKey, SmsEvent,
+    AdditionalCallingPartyNumber, AlertingPattern, BcsmEvent, BearerCapability,
+    CallReferenceNumber, CalledPartyBcdNumber, CalledPartyNumber, CallingPartyNumber,
+    CallingPartysCategory, Carrier, Cause, CgEncountered, ChargeNumber, CugInterlock,
+    EventSpecificInformationBcsm, EventTypeBcsm, EventTypeSms, ExtBasicServiceCode, Extensions,
+    GenericNumbers, HighLayerCompatibility, Imsi, InitialDpArgExtension, IpSspCapabilities,
+    IsdnAddressString, LegId, LocationInformation, LocationNumber, MiscCallInfo, NaOliInfo,
+    OriginalCalledPartyId, ReceivingSideId, RedirectingPartyId, RedirectionInformation,
+    ServiceInteractionIndicatorsTwo, ServiceKey, SmsEvent, SubscriberState, TimeAndTimezone,
 };
 
 // ── Call control ────────────────────────────────────────────────────────────
 
-/// InitialDP (op 0) — gsmSSF reports a triggered call to the gsmSCF. Tags are
-/// from the CAP ASN.1 (distinct from MAP); fields ascend by tag.
+/// InitialDP (op 0): the gsmSSF reports a triggered call to the gsmSCF.
+///
+/// The members are encoded in the order the ASN.1 lists them, which is not
+/// ascending tag order: `cause [17]` follows `redirectionInformation [30]`.
+///
+/// ```text
+/// InitialDPArg ::= SEQUENCE {
+///   serviceKey                      [0]  ServiceKey,
+///   calledPartyNumber               [2]  CalledPartyNumber OPTIONAL,
+///   callingPartyNumber              [3]  CallingPartyNumber OPTIONAL,
+///   callingPartysCategory           [5]  CallingPartysCategory OPTIONAL,
+///   cGEncountered                   [7]  CGEncountered OPTIONAL,
+///   iPSSPCapabilities               [8]  IPSSPCapabilities OPTIONAL,
+///   locationNumber                  [10] LocationNumber OPTIONAL,
+///   originalCalledPartyID           [12] OriginalCalledPartyID OPTIONAL,
+///   extensions                      [15] Extensions OPTIONAL,
+///   highLayerCompatibility          [23] HighLayerCompatibility OPTIONAL,
+///   additionalCallingPartyNumber    [25] AdditionalCallingPartyNumber OPTIONAL,
+///   bearerCapability                [27] BearerCapability OPTIONAL,      -- CHOICE: explicit
+///   eventTypeBCSM                   [28] EventTypeBCSM OPTIONAL,
+///   redirectingPartyID              [29] RedirectingPartyID OPTIONAL,
+///   redirectionInformation          [30] RedirectionInformation OPTIONAL,
+///   cause                           [17] Cause OPTIONAL,
+///   serviceInteractionIndicatorsTwo [32] ServiceInteractionIndicatorsTwo OPTIONAL,
+///   carrier                         [37] Carrier OPTIONAL,
+///   cug-Index                       [45] CUG-Index OPTIONAL,
+///   cug-Interlock                   [46] CUG-Interlock OPTIONAL,
+///   cug-OutgoingAccess              [47] NULL OPTIONAL,
+///   iMSI                            [50] IMSI OPTIONAL,
+///   subscriberState                 [51] SubscriberState OPTIONAL,       -- CHOICE: explicit
+///   locationInformation             [52] LocationInformation OPTIONAL,
+///   ext-basicServiceCode            [53] Ext-BasicServiceCode OPTIONAL,  -- CHOICE: explicit
+///   callReferenceNumber             [54] CallReferenceNumber OPTIONAL,
+///   mscAddress                      [55] ISDN-AddressString OPTIONAL,
+///   calledPartyBCDNumber            [56] CalledPartyBCDNumber OPTIONAL,
+///   timeAndTimezone                 [57] TimeAndTimezone OPTIONAL,
+///   callForwardingSS-Pending        [58] NULL OPTIONAL,
+///   initialDPArgExtension           [59] InitialDPArgExtension OPTIONAL,
+///   ...}
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct InitialDpArg {
     #[rasn(tag(context, 0))]
@@ -26,17 +66,50 @@ pub struct InitialDpArg {
     #[rasn(tag(context, 3))]
     pub calling_party_number: Option<CallingPartyNumber>,
     #[rasn(tag(context, 5))]
-    pub calling_partys_category: Option<OctetString>,
+    pub calling_partys_category: Option<CallingPartysCategory>,
+    #[rasn(tag(context, 7))]
+    pub cg_encountered: Option<CgEncountered>,
+    #[rasn(tag(context, 8))]
+    pub ip_ssp_capabilities: Option<IpSspCapabilities>,
+    #[rasn(tag(context, 10))]
+    pub location_number: Option<LocationNumber>,
     #[rasn(tag(context, 12))]
     pub original_called_party_id: Option<OriginalCalledPartyId>,
+    #[rasn(tag(context, 15))]
+    pub extensions: Option<Extensions>,
+    #[rasn(tag(context, 23))]
+    pub high_layer_compatibility: Option<HighLayerCompatibility>,
+    #[rasn(tag(context, 25))]
+    pub additional_calling_party_number: Option<AdditionalCallingPartyNumber>,
+    #[rasn(tag(explicit(context, 27)))]
+    pub bearer_capability: Option<BearerCapability>,
     #[rasn(tag(context, 28))]
     pub event_type_bcsm: Option<EventTypeBcsm>,
     #[rasn(tag(context, 29))]
     pub redirecting_party_id: Option<RedirectingPartyId>,
+    #[rasn(tag(context, 30))]
+    pub redirection_information: Option<RedirectionInformation>,
+    #[rasn(tag(context, 17))]
+    pub cause: Option<Cause>,
+    #[rasn(tag(context, 32))]
+    pub service_interaction_indicators_two: Option<ServiceInteractionIndicatorsTwo>,
+    #[rasn(tag(context, 37))]
+    pub carrier: Option<Carrier>,
+    /// CUG-Index, INTEGER (0..32767).
+    #[rasn(tag(context, 45))]
+    pub cug_index: Option<u16>,
+    #[rasn(tag(context, 46))]
+    pub cug_interlock: Option<CugInterlock>,
+    #[rasn(tag(context, 47))]
+    pub cug_outgoing_access: Option<()>,
     #[rasn(tag(context, 50))]
     pub imsi: Option<Imsi>,
+    #[rasn(tag(explicit(context, 51)))]
+    pub subscriber_state: Option<SubscriberState>,
     #[rasn(tag(context, 52))]
     pub location_information: Option<LocationInformation>,
+    #[rasn(tag(explicit(context, 53)))]
+    pub ext_basic_service_code: Option<ExtBasicServiceCode>,
     #[rasn(tag(context, 54))]
     pub call_reference_number: Option<CallReferenceNumber>,
     #[rasn(tag(context, 55))]
@@ -44,7 +117,11 @@ pub struct InitialDpArg {
     #[rasn(tag(context, 56))]
     pub called_party_bcd_number: Option<CalledPartyBcdNumber>,
     #[rasn(tag(context, 57))]
-    pub time_and_timezone: Option<OctetString>,
+    pub time_and_timezone: Option<TimeAndTimezone>,
+    #[rasn(tag(context, 58))]
+    pub call_forwarding_ss_pending: Option<()>,
+    #[rasn(tag(context, 59))]
+    pub initial_dp_arg_extension: Option<InitialDpArgExtension>,
 }
 
 impl InitialDpArg {
@@ -55,15 +132,33 @@ impl InitialDpArg {
             called_party_number: None,
             calling_party_number: None,
             calling_partys_category: None,
+            cg_encountered: None,
+            ip_ssp_capabilities: None,
+            location_number: None,
             original_called_party_id: None,
+            extensions: None,
+            high_layer_compatibility: None,
+            additional_calling_party_number: None,
+            bearer_capability: None,
             event_type_bcsm: None,
             redirecting_party_id: None,
+            redirection_information: None,
+            cause: None,
+            service_interaction_indicators_two: None,
+            carrier: None,
+            cug_index: None,
+            cug_interlock: None,
+            cug_outgoing_access: None,
             imsi: None,
+            subscriber_state: None,
             location_information: None,
+            ext_basic_service_code: None,
             call_reference_number: None,
             msc_address: None,
             called_party_bcd_number: None,
             time_and_timezone: None,
+            call_forwarding_ss_pending: None,
+            initial_dp_arg_extension: None,
         }
     }
 }

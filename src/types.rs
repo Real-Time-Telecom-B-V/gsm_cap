@@ -655,6 +655,122 @@ pub struct ServiceInteractionIndicatorsTwo {
     pub ect_treatment_indicator: Option<OctetString>,
 }
 
+// ── InitialDP ───────────────────────────────────────────────────────────────
+
+/// IPSSPCapabilities, 1 to 4 octets of capability bits.
+pub type IpSspCapabilities = OctetString;
+/// HighLayerCompatibility, 2 octets (Q.931, without identifier and length).
+pub type HighLayerCompatibility = OctetString;
+/// LowLayerCompatibility, 1 to 16 octets (TS 24.008, without identifier and
+/// length).
+pub type LowLayerCompatibility = OctetString;
+/// AdditionalCallingPartyNumber, in Digits (generic number) format.
+pub type AdditionalCallingPartyNumber = OctetString;
+/// TimeAndTimezone, 8 octets: BCD `YYYYMMDDhhmmss` with swapped nibbles, then
+/// the time zone.
+pub type TimeAndTimezone = OctetString;
+/// MS-Classmark2, 3 octets (TS 24.008, without identifier and length).
+pub type MsClassmark2 = OctetString;
+/// IMEI, 8 octets of TBCD.
+pub type Imei = OctetString;
+/// SupportedCamelPhases: bit 0 is phase 1, bit 3 phase 4.
+pub type SupportedCamelPhases = BitString;
+/// OfferedCamel4Functionalities: bit 0 initiateCallAttempt ... bit 19
+/// collectInformation, 15 to 64 bits.
+pub type OfferedCamel4Functionalities = BitString;
+
+/// CGEncountered: whether call gapping was applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum CgEncountered {
+    NoCgEncountered = 0,
+    ManualCgEncountered = 1,
+    ScpOverload = 2,
+}
+
+/// BearerCapability. A CHOICE with one alternative, so every tagged member
+/// of this type is EXPLICIT.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum BearerCapability {
+    /// Q.931 / ISUP user service information, without identifier and length.
+    #[rasn(tag(context, 0))]
+    BearerCap(OctetString),
+}
+
+/// NotReachableReason (MAP-MS-DataTypes).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum NotReachableReason {
+    MsPurged = 0,
+    ImsiDetached = 1,
+    RestrictedArea = 2,
+    NotRegistered = 3,
+}
+
+/// SubscriberState (MAP-MS-DataTypes). `netDetNotReachable` carries no
+/// context tag: it is a universal ENUMERATED.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum SubscriberState {
+    #[rasn(tag(context, 0))]
+    AssumedIdle(()),
+    #[rasn(tag(context, 1))]
+    CamelBusy(()),
+    NetDetNotReachable(NotReachableReason),
+    #[rasn(tag(context, 2))]
+    NotProvidedFromVlr(()),
+}
+
+/// UU-Data (MAP-CH-DataTypes): user-to-user signalling.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct UuData {
+    #[rasn(tag(context, 0))]
+    pub uu_indicator: Option<OctetString>,
+    #[rasn(tag(context, 1))]
+    pub uui: Option<OctetString>,
+    #[rasn(tag(context, 2))]
+    pub uus_cf_interaction: Option<()>,
+    #[rasn(tag(context, 3))]
+    pub extension_container: Option<ExtensionContainer>,
+}
+
+/// InitialDPArgExtension. Release 1999 defines only `gmscAddress`; everything
+/// else arrived with phase 4.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct InitialDpArgExtension {
+    #[rasn(tag(context, 0))]
+    pub gmsc_address: Option<IsdnAddressString>,
+    #[rasn(tag(context, 1))]
+    pub forwarding_destination_number: Option<CalledPartyNumber>,
+    #[rasn(tag(context, 2))]
+    pub ms_classmark2: Option<MsClassmark2>,
+    #[rasn(tag(context, 3))]
+    pub imei: Option<Imei>,
+    #[rasn(tag(context, 4))]
+    pub supported_camel_phases: Option<SupportedCamelPhases>,
+    #[rasn(tag(context, 5))]
+    pub offered_camel4_functionalities: Option<OfferedCamel4Functionalities>,
+    #[rasn(tag(explicit(context, 6)))]
+    pub bearer_capability2: Option<BearerCapability>,
+    #[rasn(tag(explicit(context, 7)))]
+    pub ext_basic_service_code2: Option<ExtBasicServiceCode>,
+    #[rasn(tag(context, 8))]
+    pub high_layer_compatibility2: Option<HighLayerCompatibility>,
+    #[rasn(tag(context, 9))]
+    pub low_layer_compatibility: Option<LowLayerCompatibility>,
+    #[rasn(tag(context, 10))]
+    pub low_layer_compatibility2: Option<LowLayerCompatibility>,
+    #[rasn(tag(context, 11))]
+    pub enhanced_dialled_services_allowed: Option<()>,
+    #[rasn(tag(context, 12))]
+    pub uu_data: Option<UuData>,
+    #[rasn(tag(context, 13))]
+    pub collect_information_allowed: Option<()>,
+    #[rasn(tag(context, 14))]
+    pub release_call_arg_extension_allowed: Option<()>,
+}
+
 // ── MAP types CAP imports (3GPP TS 29.002 V18.0.0 clause 17.7) ───────────────
 //
 // The MAP modules are `DEFINITIONS IMPLICIT TAGS`, like the CAP ones. A tag in
