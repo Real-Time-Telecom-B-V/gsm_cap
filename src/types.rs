@@ -1341,7 +1341,26 @@ pub struct LocationInformation {
     pub user_csg_information: Option<UserCsgInformation>,
 }
 
-/// EventTypeSMS — SMS detection-point events.
+// ── CAMEL control of SMS ────────────────────────────────────────────────────
+
+/// SMS-AddressString, an AddressString of at most 11 octets.
+pub type SmsAddressString = OctetString;
+/// RPCause, 1 octet (TS 24.011 RP-Cause).
+pub type RpCause = OctetString;
+/// MT-SMSCause, 1 octet (TS 24.011 RP-Cause).
+pub type MtSmsCause = OctetString;
+/// TPShortMessageSpecificInfo: the first octet of the TPDU.
+pub type TpShortMessageSpecificInfo = OctetString;
+/// TPProtocolIdentifier, 1 octet (TS 23.040).
+pub type TpProtocolIdentifier = OctetString;
+/// TPDataCodingScheme, 1 octet (TS 23.040).
+pub type TpDataCodingScheme = OctetString;
+/// TPValidityPeriod, 1 or 7 octets (TS 23.040).
+pub type TpValidityPeriod = OctetString;
+/// RAIdentity, 6 octets.
+pub type RaIdentity = OctetString;
+
+/// EventTypeSMS: the SMS detection points.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
 #[rasn(enumerated)]
 pub enum EventTypeSms {
@@ -1353,11 +1372,91 @@ pub enum EventTypeSms {
     TSmsDelivery = 13,
 }
 
-/// SMSEvent — SMS event detection-point configuration.
+/// SMSEvent: one SMS detection point to arm.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct SmsEvent {
     #[rasn(tag(context, 0))]
     pub event_type_sms: EventTypeSms,
     #[rasn(tag(context, 1))]
     pub monitor_mode: MonitorMode,
+}
+
+/// MO-SMSCause.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum MoSmsCause {
+    SystemFailure = 0,
+    UnexpectedDataValue = 1,
+    FacilityNotSupported = 2,
+    SmDeliveryFailure = 3,
+    ReleaseFromRadioInterface = 4,
+}
+
+/// o-smsFailureSpecificInfo.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct OSmsFailureSpecificInfo {
+    #[rasn(tag(context, 0))]
+    pub failure_cause: Option<MoSmsCause>,
+}
+
+/// o-smsSubmissionSpecificInfo and t-smsDeliverySpecificInfo: nothing
+/// defined.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct EmptySmsSpecificInfo {}
+
+/// t-smsFailureSpecificInfo.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TSmsFailureSpecificInfo {
+    #[rasn(tag(context, 0))]
+    pub failure_cause: Option<MtSmsCause>,
+}
+
+/// EventSpecificInformationSMS. A CHOICE, so every tagged member of this type
+/// is EXPLICIT.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum EventSpecificInformationSms {
+    #[rasn(tag(context, 0))]
+    OSmsFailureSpecificInfo(OSmsFailureSpecificInfo),
+    #[rasn(tag(context, 1))]
+    OSmsSubmissionSpecificInfo(EmptySmsSpecificInfo),
+    #[rasn(tag(context, 2))]
+    TSmsFailureSpecificInfo(TSmsFailureSpecificInfo),
+    #[rasn(tag(context, 3))]
+    TSmsDeliverySpecificInfo(EmptySmsSpecificInfo),
+}
+
+/// LocationInformationGPRS, the location of a packet-switched subscriber.
+///
+/// Unlike [`LocationInformation`], `cellGlobalIdOrServiceAreaIdOrLAI` is a
+/// plain OCTET STRING (5 to 7 octets) here, so `[0]` is primitive.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct LocationInformationGprs {
+    #[rasn(tag(context, 0))]
+    pub cell_global_id_or_service_area_id_or_lai: Option<OctetString>,
+    #[rasn(tag(context, 1))]
+    pub routeing_area_identity: Option<RaIdentity>,
+    #[rasn(tag(context, 2))]
+    pub geographical_information: Option<GeographicalInformation>,
+    #[rasn(tag(context, 3))]
+    pub sgsn_number: Option<IsdnAddressString>,
+    #[rasn(tag(context, 4))]
+    pub selected_lsa_identity: Option<LsaIdentity>,
+    #[rasn(tag(context, 5))]
+    pub extension_container: Option<ExtensionContainer>,
+    #[rasn(tag(context, 6))]
+    pub sai_present: Option<()>,
+    #[rasn(tag(context, 7))]
+    pub user_csg_information: Option<UserCsgInformation>,
+}
+
+/// GPRSMSClass (MAP-MS-DataTypes).
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct GprsMsClass {
+    /// MSNetworkCapability, 1 to 8 octets (TS 24.008).
+    #[rasn(tag(context, 0))]
+    pub ms_network_capability: OctetString,
+    /// MSRadioAccessCapability, 1 to 50 octets (TS 24.008).
+    #[rasn(tag(context, 1))]
+    pub ms_radio_access_capability: Option<OctetString>,
 }

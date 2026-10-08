@@ -573,9 +573,35 @@ impl PromptAndCollectUserInformationArg {
 /// the `inap` crate.
 pub use inap::operations::PromptAndCollectUserInformationRes;
 
-// ── CAMEL for SMS (CAP v3+) ─────────────────────────────────────────────────
+// ── CAMEL control of SMS (phase 3 onward) ───────────────────────────────────
 
-/// InitialDPSMS (op 60).
+/// InitialDPSMS (op 60): the smsSSF reports a triggered short message.
+///
+/// ```text
+/// InitialDPSMSArg ::= SEQUENCE {
+///   serviceKey                  [0]  ServiceKey,
+///   destinationSubscriberNumber [1]  CalledPartyBCDNumber OPTIONAL,
+///   callingPartyNumber          [2]  SMS-AddressString OPTIONAL,
+///   eventTypeSMS                [3]  EventTypeSMS OPTIONAL,
+///   iMSI                        [4]  IMSI OPTIONAL,
+///   locationInformationMSC      [5]  LocationInformation OPTIONAL,
+///   locationInformationGPRS     [6]  LocationInformationGPRS OPTIONAL,
+///   sMSCAddress                 [7]  ISDN-AddressString OPTIONAL,
+///   timeAndTimezone             [8]  TimeAndTimezone OPTIONAL,
+///   tPShortMessageSpecificInfo  [9]  TPShortMessageSpecificInfo OPTIONAL,
+///   tPProtocolIdentifier        [10] TPProtocolIdentifier OPTIONAL,
+///   tPDataCodingScheme          [11] TPDataCodingScheme OPTIONAL,
+///   tPValidityPeriod            [12] TPValidityPeriod OPTIONAL,
+///   extensions                  [13] Extensions OPTIONAL,
+///   ...,
+///   smsReferenceNumber          [14] CallReferenceNumber OPTIONAL,
+///   mscAddress                  [15] ISDN-AddressString OPTIONAL,
+///   sgsn-Number                 [16] ISDN-AddressString OPTIONAL,
+///   ms-Classmark2               [17] MS-Classmark2 OPTIONAL,
+///   gPRSMSClass                 [18] GPRSMSClass OPTIONAL,
+///   iMEI                        [19] IMEI OPTIONAL,
+///   calledPartyNumber           [20] ISDN-AddressString OPTIONAL }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct InitialDpSmsArg {
     #[rasn(tag(context, 0))]
@@ -583,7 +609,7 @@ pub struct InitialDpSmsArg {
     #[rasn(tag(context, 1))]
     pub destination_subscriber_number: Option<CalledPartyBcdNumber>,
     #[rasn(tag(context, 2))]
-    pub calling_party_number: Option<IsdnAddressString>,
+    pub calling_party_number: Option<SmsAddressString>,
     #[rasn(tag(context, 3))]
     pub event_type_sms: Option<EventTypeSms>,
     #[rasn(tag(context, 4))]
@@ -591,25 +617,35 @@ pub struct InitialDpSmsArg {
     #[rasn(tag(context, 5))]
     pub location_information_msc: Option<LocationInformation>,
     #[rasn(tag(context, 6))]
-    pub smsc_address: Option<IsdnAddressString>,
+    pub location_information_gprs: Option<LocationInformationGprs>,
     #[rasn(tag(context, 7))]
-    pub time_and_timezone: Option<OctetString>,
+    pub smsc_address: Option<IsdnAddressString>,
     #[rasn(tag(context, 8))]
-    pub tp_short_message_specific_info: Option<OctetString>,
+    pub time_and_timezone: Option<TimeAndTimezone>,
     #[rasn(tag(context, 9))]
-    pub tp_protocol_identifier: Option<OctetString>,
+    pub tp_short_message_specific_info: Option<TpShortMessageSpecificInfo>,
     #[rasn(tag(context, 10))]
-    pub tp_data_coding_scheme: Option<OctetString>,
+    pub tp_protocol_identifier: Option<TpProtocolIdentifier>,
     #[rasn(tag(context, 11))]
-    pub tp_validity_period: Option<OctetString>,
+    pub tp_data_coding_scheme: Option<TpDataCodingScheme>,
+    #[rasn(tag(context, 12))]
+    pub tp_validity_period: Option<TpValidityPeriod>,
     #[rasn(tag(context, 13))]
-    pub sms_reference_number: Option<CallReferenceNumber>,
+    pub extensions: Option<Extensions>,
     #[rasn(tag(context, 14))]
-    pub msc_address: Option<IsdnAddressString>,
+    pub sms_reference_number: Option<CallReferenceNumber>,
     #[rasn(tag(context, 15))]
-    pub sgsn_number: Option<IsdnAddressString>,
+    pub msc_address: Option<IsdnAddressString>,
     #[rasn(tag(context, 16))]
-    pub ms_classmark2: Option<OctetString>,
+    pub sgsn_number: Option<IsdnAddressString>,
+    #[rasn(tag(context, 17))]
+    pub ms_classmark2: Option<MsClassmark2>,
+    #[rasn(tag(context, 18))]
+    pub gprs_ms_class: Option<GprsMsClass>,
+    #[rasn(tag(context, 19))]
+    pub imei: Option<Imei>,
+    #[rasn(tag(context, 20))]
+    pub called_party_number: Option<IsdnAddressString>,
 }
 
 impl InitialDpSmsArg {
@@ -622,52 +658,96 @@ impl InitialDpSmsArg {
             event_type_sms: None,
             imsi: None,
             location_information_msc: None,
+            location_information_gprs: None,
             smsc_address: None,
             time_and_timezone: None,
             tp_short_message_specific_info: None,
             tp_protocol_identifier: None,
             tp_data_coding_scheme: None,
             tp_validity_period: None,
+            extensions: None,
             sms_reference_number: None,
             msc_address: None,
             sgsn_number: None,
             ms_classmark2: None,
+            gprs_ms_class: None,
+            imei: None,
+            called_party_number: None,
         }
     }
 }
 
-/// ConnectSMS (op 61).
-#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+/// ConnectSMS (op 62): the gsmSCF changes where the short message goes.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct ConnectSmsArg {
     #[rasn(tag(context, 0))]
-    pub calling_partys_number: Option<IsdnAddressString>,
+    pub calling_partys_number: Option<SmsAddressString>,
     #[rasn(tag(context, 1))]
     pub destination_subscriber_number: Option<CalledPartyBcdNumber>,
     #[rasn(tag(context, 2))]
     pub smsc_address: Option<IsdnAddressString>,
+    #[rasn(tag(context, 10))]
+    pub extensions: Option<Extensions>,
 }
 
-/// ReleaseSMS (op 62).
+/// ReleaseSMS (op 66): the gsmSCF refuses the short message.
+///
+/// `ReleaseSMSArg ::= RPCause`, a bare one-octet OCTET STRING; there is no
+/// SEQUENCE around it.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
-pub struct ReleaseSmsArg {
-    /// RP-Cause value.
-    pub rp_cause: OctetString,
-}
+#[rasn(delegate)]
+pub struct ReleaseSmsArg(pub RpCause);
 
-/// RequestReportSMSEvent (op 63).
+/// RequestReportSMSEvent (op 63): the gsmSCF arms SMS detection points.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct RequestReportSmsEventArg {
     #[rasn(tag(context, 0))]
     pub sms_events: Vec<SmsEvent>,
+    #[rasn(tag(context, 10))]
+    pub extensions: Option<Extensions>,
 }
 
-/// EventReportSMS (op 64).
+impl RequestReportSmsEventArg {
+    /// An argument arming `sms_events`, without extensions.
+    pub fn new(sms_events: Vec<SmsEvent>) -> Self {
+        Self {
+            sms_events,
+            extensions: None,
+        }
+    }
+}
+
+/// EventReportSMS (op 64): the smsSSF reports an SMS detection point.
+///
+/// ```text
+/// EventReportSMSArg ::= SEQUENCE {
+///   eventTypeSMS                [0]  EventTypeSMS,
+///   eventSpecificInformationSMS [1]  EventSpecificInformationSMS OPTIONAL,  -- CHOICE: explicit
+///   miscCallInfo                [2]  MiscCallInfo DEFAULT {messageType request},
+///   extensions                  [10] Extensions OPTIONAL,
+///   ...}
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct EventReportSmsArg {
     #[rasn(tag(context, 0))]
     pub event_type_sms: EventTypeSms,
-    #[rasn(tag(context, 1))]
-    pub event_specific_information_sms: Option<OctetString>,
+    #[rasn(tag(explicit(context, 1)))]
+    pub event_specific_information_sms: Option<EventSpecificInformationSms>,
+    /// `DEFAULT {messageType request}`.
     #[rasn(tag(context, 2))]
-    pub misc_call_info: Option<OctetString>,
+    pub misc_call_info: Option<MiscCallInfo>,
+    #[rasn(tag(context, 10))]
+    pub extensions: Option<Extensions>,
+}
+
+impl EventReportSmsArg {
+    /// A report of `event_type_sms` with every optional member absent.
+    pub fn new(event_type_sms: EventTypeSms) -> Self {
+        Self {
+            event_type_sms,
+            event_specific_information_sms: None,
+            misc_call_info: None,
+            extensions: None,
+        }
+    }
 }

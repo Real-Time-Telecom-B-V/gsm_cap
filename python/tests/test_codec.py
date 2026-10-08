@@ -18,6 +18,7 @@ def test_operation_codes_and_names() -> None:
     assert gsm_cap.CONNECT == 20
     assert gsm_cap.RELEASE_CALL == 22
     assert gsm_cap.INITIAL_DP_SMS == 60
+    assert gsm_cap.CONNECT_SMS == 62
     assert gsm_cap.operation_name(gsm_cap.INITIAL_DP) == "initialDP"
     assert gsm_cap.operation_name(gsm_cap.CONNECT) == "connect"
     assert gsm_cap.operation_name(gsm_cap.INITIAL_DP_SMS) == "initialDPSMS"
@@ -214,6 +215,13 @@ def test_initial_dp_sms_round_trip() -> None:
     assert back.calling_party_number == bytes([0x91, 0x55, 0x01, 0x88])
     assert back.event_type_sms == gsm_cap.EventTypeSms.OSmsSubmission
     assert back.smsc_address == bytes([0x91, 0x55, 0x01, 0x00])
+
+
+def test_initial_dp_sms_known_bytes() -> None:
+    # serviceKey [0] 7, sMSCAddress [7] (not [6], which is
+    # locationInformationGPRS).
+    s = gsm_cap.InitialDpSmsArg(7, smsc_address=bytes.fromhex("9151551030"))
+    assert s.encode() == bytes.fromhex("300a80010787059151551030")
 
 
 def test_application_context_helpers() -> None:
