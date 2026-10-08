@@ -27,6 +27,7 @@ pub mod application_context;
 pub mod error;
 pub mod op_codes;
 pub mod operations;
+mod strict;
 pub mod types;
 
 #[cfg(feature = "python")]
@@ -44,6 +45,14 @@ pub fn encode<T: rasn::Encode>(value: &T) -> Result<Vec<u8>, CapError> {
 }
 
 /// Decode a CAP operation argument/result from BER.
-pub fn decode<T: rasn::Decode>(bytes: &[u8]) -> Result<T, CapError> {
-    rasn::ber::decode(bytes).map_err(|e| CapError::Decode(e.to_string()))
+///
+/// Decoding is strict about one thing `rasn` is not: a member that is present
+/// on the wire but whose content cannot be read is an error, never a silently
+/// absent member. See the `strict` module source for why that needs a second
+/// pass. The cost is one extra encode of the decoded value.
+pub fn decode<T: rasn::Decode + rasn::Encode>(bytes: &[u8]) -> Result<T, CapError> {
+    let value: T = rasn::ber::decode(bytes).map_err(|e| CapError::Decode(e.to_string()))?;
+    let canonical = rasn::ber::encode(&value).map_err(|e| CapError::Decode(e.to_string()))?;
+    strict::nothing_dropped(bytes, &canonical).map_err(CapError::Decode)?;
+    Ok(value)
 }
