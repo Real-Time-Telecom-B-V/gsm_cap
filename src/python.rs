@@ -830,20 +830,25 @@ fn operation_name(code: i64) -> Option<&'static str> {
     op_codes::operation_name(code)
 }
 
-/// CAP application-context OID as a tuple of arcs — gsmSSF-scfGenericAC
-/// (call control) for the given phase (1..=4).
+/// gsmSSF-scfGenericAC (call control) application-context OID arcs for a CAP
+/// phase (1..=4), `None` for a phase that does not exist.
 #[pyfunction]
-fn cap_gsmssf_scf_generic(version: u32) -> Vec<u32> {
-    ac::cap_gsmssf_scf_generic(version)
-        .iter()
-        .copied()
-        .collect()
+fn cap_gsmssf_scf_generic(version: u32) -> Option<Vec<u32>> {
+    ac::cap_gsmssf_scf_generic(version).map(|oid| oid.iter().copied().collect())
 }
 
-/// CAP application-context OID as a tuple of arcs — cap-sms-AC (SMS control).
+/// SMS control application-context OID arcs. SMS control starts with CAP phase
+/// 3, so phases 1 and 2 give `None`.
 #[pyfunction]
-fn cap_sms_ac(version: u32) -> Vec<u32> {
-    ac::cap_sms_ac(version).iter().copied().collect()
+fn cap_sms_ac(version: u32) -> Option<Vec<u32>> {
+    ac::cap_sms_ac(version).map(|oid| oid.iter().copied().collect())
+}
+
+/// gsmSRF-gsmSCF (specialised resources) application-context OID arcs. Phase 1
+/// has no such context.
+#[pyfunction]
+fn cap_gsmsrf_scf(version: u32) -> Option<Vec<u32>> {
+    ac::cap_gsmsrf_scf(version).map(|oid| oid.iter().copied().collect())
 }
 
 // ── i64 <- Integer helper ────────────────────────────────────────────────────
@@ -876,6 +881,7 @@ fn add_contents(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(operation_name, m)?)?;
     m.add_function(wrap_pyfunction!(cap_gsmssf_scf_generic, m)?)?;
     m.add_function(wrap_pyfunction!(cap_sms_ac, m)?)?;
+    m.add_function(wrap_pyfunction!(cap_gsmsrf_scf, m)?)?;
 
     // Operation codes (3GPP TS 29.078).
     m.add("INITIAL_DP", op_codes::INITIAL_DP)?;

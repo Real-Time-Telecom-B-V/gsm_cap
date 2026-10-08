@@ -43,6 +43,7 @@ from ._gsm_cap import (
     MonitorMode,
     ReleaseCallArg,
     RequestReportBcsmEventArg,
+    cap_gsmsrf_scf,
     cap_gsmssf_scf_generic,
     cap_sms_ac,
     operation_name,
@@ -73,6 +74,7 @@ __all__ = [
     "operation_name",
     "cap_gsmssf_scf_generic",
     "cap_sms_ac",
+    "cap_gsmsrf_scf",
     # operation codes
     "INITIAL_DP",
     "CONNECT",

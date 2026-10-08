@@ -195,8 +195,20 @@ class InitialDpSmsArg:
 def operation_name(code: int) -> Optional[str]:
     """Name of a well-known CAP operation code (e.g. ``0 -> "initialDP"``)."""
 
-def cap_gsmssf_scf_generic(version: int) -> list[int]:
-    """gsmSSF-scfGenericAC application-context OID arcs for a CAP phase (1..=4)."""
+def cap_gsmssf_scf_generic(version: int) -> Optional[list[int]]:
+    """gsmSSF-scfGenericAC application-context OID arcs for a CAP phase (1..=4).
 
-def cap_sms_ac(version: int) -> list[int]:
-    """cap-sms-AC application-context OID arcs for a CAP phase (1..=4)."""
+    ``None`` for a phase that does not exist.
+    """
+
+def cap_sms_ac(version: int) -> Optional[list[int]]:
+    """SMS control application-context OID arcs (CAP phase 3 or 4).
+
+    ``None`` for phases 1 and 2, which have no SMS control.
+    """
+
+def cap_gsmsrf_scf(version: int) -> Optional[list[int]]:
+    """gsmSRF-gsmSCF application-context OID arcs (CAP phase 2, 3 or 4).
+
+    ``None`` for phase 1, which has no such context.
+    """

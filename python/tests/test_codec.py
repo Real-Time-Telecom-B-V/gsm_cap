@@ -153,12 +153,17 @@ def test_initial_dp_sms_round_trip() -> None:
 
 
 def test_application_context_helpers() -> None:
-    # CAP v3 gsmSSF-scfGeneric = 0.4.0.0.1.21.3.4
+    # CAP v3 gsmSSF-scfGeneric = 0.4.0.0.1.21.3.4, v4 = 0.4.0.0.1.23.3.4
     assert gsm_cap.cap_gsmssf_scf_generic(3) == [0, 4, 0, 0, 1, 21, 3, 4]
-    # CAP v4 differs from v3 (module 23 vs 21).
-    assert gsm_cap.cap_gsmssf_scf_generic(4) != gsm_cap.cap_gsmssf_scf_generic(3)
-    # SMS AC id is 50.
-    assert gsm_cap.cap_sms_ac(3)[-1] == 50
+    assert gsm_cap.cap_gsmssf_scf_generic(4) == [0, 4, 0, 0, 1, 23, 3, 4]
+    assert gsm_cap.cap_gsmssf_scf_generic(9) is None
+    # SMS control is context 61 (50 is the GPRS context) and starts with v3.
+    assert gsm_cap.cap_sms_ac(3) == [0, 4, 0, 0, 1, 21, 3, 61]
+    assert gsm_cap.cap_sms_ac(4) == [0, 4, 0, 0, 1, 23, 3, 61]
+    assert gsm_cap.cap_sms_ac(2) is None
+    # gsmSRF is context 14 under the non-OE roots (20 and 22).
+    assert gsm_cap.cap_gsmsrf_scf(3) == [0, 4, 0, 0, 1, 20, 3, 14]
+    assert gsm_cap.cap_gsmsrf_scf(4) == [0, 4, 0, 0, 1, 22, 3, 14]
 
 
 def test_decode_rejects_garbage() -> None:
