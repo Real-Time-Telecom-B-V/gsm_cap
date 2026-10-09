@@ -36,14 +36,22 @@ class EventTypeBcsm:
     OCalledPartyBusy: EventTypeBcsm
     ONoAnswer: EventTypeBcsm
     OAnswer: EventTypeBcsm
+    OMidCall: EventTypeBcsm
     ODisconnect: EventTypeBcsm
     OAbandon: EventTypeBcsm
     TermAttemptAuthorized: EventTypeBcsm
     TBusy: EventTypeBcsm
     TNoAnswer: EventTypeBcsm
     TAnswer: EventTypeBcsm
+    TMidCall: EventTypeBcsm
     TDisconnect: EventTypeBcsm
     TAbandon: EventTypeBcsm
+    OTermSeized: EventTypeBcsm
+    CallAccepted: EventTypeBcsm
+    OChangeOfPosition: EventTypeBcsm
+    TChangeOfPosition: EventTypeBcsm
+    OServiceChange: EventTypeBcsm
+    TServiceChange: EventTypeBcsm
     def __int__(self) -> int: ...
     def __eq__(self, other: object) -> bool: ...
     def __hash__(self) -> int: ...
@@ -72,17 +80,27 @@ class EventTypeSms:
     def __hash__(self) -> int: ...
 
 class BcsmEvent:
-    """One event detection-point configuration entry."""
+    """One event detection-point configuration entry.
+
+    ``legID`` is a CHOICE on the wire: pass the one-octet leg (``b"\\x01"`` or
+    ``b"\\x02"``) as ``sending_side_id`` (what a gsmSCF uses) or as
+    ``receiving_side_id``, never both (``ValueError``). ``application_timer``
+    is the no-answer timer in seconds.
+    """
 
     event_type_bcsm: EventTypeBcsm
     monitor_mode: MonitorMode
-    leg_id: Optional[bytes]
+    sending_side_id: Optional[bytes]
+    receiving_side_id: Optional[bytes]
+    application_timer: Optional[int]
     def __init__(
         self,
         event_type_bcsm: EventTypeBcsm,
         monitor_mode: MonitorMode,
         *,
-        leg_id: Optional[bytes] = ...,
+        sending_side_id: Optional[bytes] = ...,
+        receiving_side_id: Optional[bytes] = ...,
+        application_timer: Optional[int] = ...,
     ) -> None: ...
 
 class InitialDpArg:
@@ -138,24 +156,34 @@ class RequestReportBcsmEventArg:
     def decode(cls, data: bytes) -> RequestReportBcsmEventArg: ...
 
 class EventReportBcsmArg:
-    """EventReportBCSM argument (op 24) — gsmSSF → gsmSCF."""
+    """EventReportBCSM argument (op 24) — gsmSSF → gsmSCF.
+
+    ``receiving_side_id`` is the one-octet leg the event concerns.
+    ``message_type`` is 0 (request) or 1 (notification); ``None`` leaves
+    ``miscCallInfo`` out, which means request.
+    """
 
     event_type_bcsm: EventTypeBcsm
-    leg_id: Optional[bytes]
-    misc_call_info: Optional[bytes]
+    receiving_side_id: Optional[bytes]
+    message_type: Optional[int]
     def __init__(
         self,
         event_type_bcsm: EventTypeBcsm,
         *,
-        leg_id: Optional[bytes] = ...,
-        misc_call_info: Optional[bytes] = ...,
+        receiving_side_id: Optional[bytes] = ...,
+        message_type: Optional[int] = ...,
     ) -> None: ...
     def encode(self) -> bytes: ...
     @classmethod
     def decode(cls, data: bytes) -> EventReportBcsmArg: ...
 
 class ApplyChargingArg:
-    """ApplyCharging argument (op 35) — gsmSCF → gsmSSF."""
+    """ApplyCharging argument (op 35) — gsmSCF → gsmSSF.
+
+    ``ach_billing_charging_characteristics`` is the BER encoding of a
+    CAMEL-AChBillingChargingCharacteristics value; :meth:`time_duration` builds
+    it. ``party_to_charge`` is the one-octet leg, sent as ``sendingSideID``.
+    """
 
     ach_billing_charging_characteristics: bytes
     party_to_charge: Optional[bytes]
@@ -165,6 +193,21 @@ class ApplyChargingArg:
         *,
         party_to_charge: Optional[bytes] = ...,
     ) -> None: ...
+    @staticmethod
+    def time_duration(
+        max_call_period_duration: int,
+        *,
+        cap_version: int,
+        release_if_duration_exceeded: Optional[bool] = ...,
+        tariff_switch_interval: Optional[int] = ...,
+        tone: Optional[bool] = ...,
+        party_to_charge: Optional[bytes] = ...,
+    ) -> ApplyChargingArg:
+        """Time-duration charging for a CAP phase 3 or phase 4 dialogue.
+
+        ``max_call_period_duration`` is in 100 ms units. The warning tone is
+        encoded differently in the two phases, hence ``cap_version``.
+        """
     def encode(self) -> bytes: ...
     @classmethod
     def decode(cls, data: bytes) -> ApplyChargingArg: ...
@@ -195,8 +238,20 @@ class InitialDpSmsArg:
 def operation_name(code: int) -> Optional[str]:
     """Name of a well-known CAP operation code (e.g. ``0 -> "initialDP"``)."""
 
-def cap_gsmssf_scf_generic(version: int) -> list[int]:
-    """gsmSSF-scfGenericAC application-context OID arcs for a CAP phase (1..=4)."""
+def cap_gsmssf_scf_generic(version: int) -> Optional[list[int]]:
+    """gsmSSF-scfGenericAC application-context OID arcs for a CAP phase (1..=4).
 
-def cap_sms_ac(version: int) -> list[int]:
-    """cap-sms-AC application-context OID arcs for a CAP phase (1..=4)."""
+    ``None`` for a phase that does not exist.
+    """
+
+def cap_sms_ac(version: int) -> Optional[list[int]]:
+    """SMS control application-context OID arcs (CAP phase 3 or 4).
+
+    ``None`` for phases 1 and 2, which have no SMS control.
+    """
+
+def cap_gsmsrf_scf(version: int) -> Optional[list[int]]:
+    """gsmSRF-gsmSCF application-context OID arcs (CAP phase 2, 3 or 4).
+
+    ``None`` for phase 1, which has no such context.
+    """

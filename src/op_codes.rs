@@ -1,5 +1,5 @@
 //! CAP operation codes (local operation values used in TCAP Invoke components),
-//! 3GPP TS 29.078.
+//! 3GPP TS 29.078 V18.0.0 clause 5.3 (`CAP-operationcodes`).
 
 /// Call-control and specialised-resource operations.
 pub const INITIAL_DP: i64 = 0;
@@ -18,13 +18,14 @@ pub const SPECIALIZED_RESOURCE_REPORT: i64 = 49;
 pub const CANCEL: i64 = 53;
 pub const ACTIVITY_TEST: i64 = 55;
 
-/// CAMEL-for-SMS operations (CAP v3+).
+/// CAMEL-for-SMS operations (CAP v3+). 61 is furnishChargingInformationSMS and
+/// 67 resetTimerSMS, neither of which this crate models yet.
 pub const INITIAL_DP_SMS: i64 = 60;
-pub const CONNECT_SMS: i64 = 61;
-pub const RELEASE_SMS: i64 = 62;
+pub const CONNECT_SMS: i64 = 62;
 pub const REQUEST_REPORT_SMS_EVENT: i64 = 63;
 pub const EVENT_REPORT_SMS: i64 = 64;
 pub const CONTINUE_SMS: i64 = 65;
+pub const RELEASE_SMS: i64 = 66;
 
 /// The name of a well-known CAP operation code, if any.
 pub fn operation_name(code: i64) -> Option<&'static str> {

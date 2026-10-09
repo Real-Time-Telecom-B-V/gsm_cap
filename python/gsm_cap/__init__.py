@@ -16,6 +16,11 @@ RequestReportBCSMEvent, EventReportBCSM, ApplyCharging) plus CAMEL-for-SMS
 (InitialDPSMS), the shared enums, the operation codes, and the
 application-context OID helpers. CAP rides on TCAP over SCCP; wrapping these
 arguments in a TCAP Invoke is the caller's job.
+
+Each Python class exposes a subset of the members the Rust type has.
+``decode`` accepts a full argument and returns the exposed members; the
+others are not carried, so decoding and encoding again is not a way to relay
+an argument unchanged.
 """
 
 from __future__ import annotations
@@ -43,6 +48,7 @@ from ._gsm_cap import (
     MonitorMode,
     ReleaseCallArg,
     RequestReportBcsmEventArg,
+    cap_gsmsrf_scf,
     cap_gsmssf_scf_generic,
     cap_sms_ac,
     operation_name,
@@ -73,6 +79,7 @@ __all__ = [
     "operation_name",
     "cap_gsmssf_scf_generic",
     "cap_sms_ac",
+    "cap_gsmsrf_scf",
     # operation codes
     "INITIAL_DP",
     "CONNECT",

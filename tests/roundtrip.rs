@@ -1,14 +1,21 @@
-//! BER round-trip tests for CAP operations. All values are synthetic — no real
-//! subscriber data.
+//! BER round-trip tests for CAP operations: what this crate encodes, it
+//! decodes back to the same value.
+//!
+//! A round-trip says nothing about whether the bytes are the ones the
+//! specification asks for (a mistake shared by the encoder and the decoder
+//! passes it). That is what the hand-assembled vectors and the Wireshark
+//! dissections in the sibling test files are for. All values are synthetic.
 
 use rasn::types::Integer;
 
-use gsm_cap::op_codes;
 use gsm_cap::operations::{
     ApplyChargingArg, ConnectArg, EventReportBcsmArg, InitialDpArg, InitialDpSmsArg,
     ReleaseCallArg, RequestReportBcsmEventArg,
 };
-use gsm_cap::types::{BcsmEvent, EventTypeBcsm, EventTypeSms, MonitorMode};
+use gsm_cap::types::{
+    BcsmEvent, EventTypeBcsm, EventTypeSms, LegId, MonitorMode, ReceivingSideId, SendingSideId,
+    LEG1, LEG2,
+};
 
 fn round_trip<T: rasn::Decode + rasn::Encode + std::fmt::Debug + PartialEq>(v: &T) {
     let ber = gsm_cap::encode(v).expect("encode");
@@ -18,34 +25,20 @@ fn round_trip<T: rasn::Decode + rasn::Encode + std::fmt::Debug + PartialEq>(v: &
 
 #[test]
 fn initial_dp_round_trip() {
-    let idp = InitialDpArg {
-        service_key: Integer::from(42),
-        called_party_number: Some(vec![0x03, 0x55, 0x01, 0x00].into()), // synthetic
+    round_trip(&InitialDpArg {
+        called_party_number: Some(vec![0x03, 0x55, 0x01, 0x00].into()),
         calling_party_number: Some(vec![0x03, 0x55, 0x01, 0x99].into()),
-        calling_partys_category: None,
-        original_called_party_id: None,
         event_type_bcsm: Some(EventTypeBcsm::CollectedInfo),
-        redirecting_party_id: None,
-        imsi: Some(vec![0x00, 0x10, 0x19, 0x00, 0x00].into()), // fictional IMSI TBCD
-        location_information: None,
+        imsi: Some(vec![0x00, 0x10, 0x19, 0x00, 0x00].into()),
         call_reference_number: Some(vec![0xDE, 0xAD].into()),
         msc_address: Some(vec![0x91, 0x55, 0x01].into()),
-        called_party_bcd_number: None,
-        time_and_timezone: None,
-    };
-    round_trip(&idp);
+        ..InitialDpArg::new(Integer::from(42))
+    });
 }
 
 #[test]
 fn connect_round_trip() {
-    let c = ConnectArg {
-        destination_routing_address: vec![vec![0x03, 0x55, 0x01, 0x23].into()],
-        original_called_party_id: None,
-        calling_partys_category: None,
-        redirecting_party_id: None,
-        generic_numbers: None,
-    };
-    round_trip(&c);
+    round_trip(&ConnectArg::new(vec![0x03, 0x55, 0x01, 0x23].into()));
 }
 
 #[test]
@@ -54,85 +47,39 @@ fn release_call_round_trip() {
 }
 
 #[test]
-fn release_call_encodes_as_a_bare_cause_not_a_sequence() {
-    // CAP releaseCall's argument is a bare `Cause` (OCTET STRING), not a SEQUENCE.
-    // The BER must therefore start with the universal OCTET STRING tag (0x04) and
-    // NOT the constructed SEQUENCE tag (0x30) — the earlier named-field form
-    // emitted the SEQUENCE wrapper, which conforming peers / dissectors reject.
-    let ber = gsm_cap::encode(&ReleaseCallArg(vec![0x90, 0x03].into())).unwrap();
-    assert_eq!(ber, vec![0x04, 0x02, 0x90, 0x03], "bare OCTET STRING Cause");
-    assert_ne!(ber[0], 0x30, "must not be a SEQUENCE");
-}
-
-#[test]
 fn request_report_bcsm_round_trip() {
-    let r = RequestReportBcsmEventArg {
-        bcsm_events: vec![
-            BcsmEvent {
-                event_type_bcsm: EventTypeBcsm::OAnswer,
-                monitor_mode: MonitorMode::NotifyAndContinue,
-                leg_id: None,
-            },
-            BcsmEvent {
-                event_type_bcsm: EventTypeBcsm::ODisconnect,
-                monitor_mode: MonitorMode::Interrupted,
-                leg_id: Some(vec![0x01].into()),
-            },
-        ],
-    };
-    round_trip(&r);
+    round_trip(&RequestReportBcsmEventArg::new(vec![
+        BcsmEvent::new(EventTypeBcsm::OAnswer, MonitorMode::NotifyAndContinue),
+        BcsmEvent {
+            leg_id: Some(LegId::sending(LEG1)),
+            ..BcsmEvent::new(EventTypeBcsm::ODisconnect, MonitorMode::Interrupted)
+        },
+    ]));
 }
 
 #[test]
 fn event_report_bcsm_round_trip() {
     round_trip(&EventReportBcsmArg {
-        event_type_bcsm: EventTypeBcsm::OAnswer,
-        leg_id: Some(vec![0x02].into()),
-        misc_call_info: None,
+        leg_id: Some(ReceivingSideId::leg(LEG2)),
+        ..EventReportBcsmArg::new(EventTypeBcsm::OAnswer)
     });
 }
 
 #[test]
 fn apply_charging_round_trip() {
     round_trip(&ApplyChargingArg {
-        ach_billing_charging_characteristics: vec![0x00, 0x01, 0x02].into(),
-        party_to_charge: Some(vec![0x02].into()),
+        party_to_charge: Some(SendingSideId::leg(LEG1)),
+        ..ApplyChargingArg::new(vec![0xa0, 0x04, 0x80, 0x02, 0x0b, 0xb8].into())
     });
 }
 
 #[test]
 fn initial_dp_sms_round_trip() {
-    let s = InitialDpSmsArg {
-        service_key: Integer::from(7),
+    round_trip(&InitialDpSmsArg {
         destination_subscriber_number: Some(vec![0x91, 0x55, 0x01].into()),
         calling_party_number: Some(vec![0x91, 0x55, 0x01, 0x88].into()),
         event_type_sms: Some(EventTypeSms::OSmsSubmission),
-        imsi: None,
-        location_information_msc: None,
         smsc_address: Some(vec![0x91, 0x55, 0x01, 0x00].into()),
-        time_and_timezone: None,
-        tp_short_message_specific_info: None,
-        tp_protocol_identifier: None,
-        tp_data_coding_scheme: None,
-        tp_validity_period: None,
-        sms_reference_number: None,
-        msc_address: None,
-        sgsn_number: None,
-        ms_classmark2: None,
-    };
-    round_trip(&s);
-}
-
-#[test]
-fn operation_names() {
-    assert_eq!(
-        op_codes::operation_name(op_codes::INITIAL_DP),
-        Some("initialDP")
-    );
-    assert_eq!(op_codes::operation_name(op_codes::CONNECT), Some("connect"));
-    assert_eq!(
-        op_codes::operation_name(op_codes::INITIAL_DP_SMS),
-        Some("initialDPSMS")
-    );
-    assert_eq!(op_codes::operation_name(999), None);
+        ..InitialDpSmsArg::new(Integer::from(7))
+    });
 }
