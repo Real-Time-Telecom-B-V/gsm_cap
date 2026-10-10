@@ -5,6 +5,33 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
+## [3.0.0] - 2026-10-10
+
+The `inap` dependency moves from 1 to 2, so that a consumer on `inap` 2 no
+longer gets two copies of it in its graph. `gsm_cap` re-exports `inap` types,
+which makes this a major bump. No encoding changed: every hand-assembled vector
+and every Wireshark field assertion of 2.0.0 holds unmodified.
+
+Code that names these types through `gsm_cap` only compiles as before. What to
+change if your crate also depends on `inap` directly:
+
+### Changed
+
+- **`inap = "2"`.** `types::MonitorMode` is the enum of `inap` 2. Same variants,
+  same values, but a different type from the `MonitorMode` of `inap` 1: move
+  your own `inap` dependency to 2 in the same step.
+- **`operations::PromptAndCollectUserInformationRes` is defined in this crate**
+  and no longer re-exported from `inap`. `inap` 2 gave its type the
+  `iA5Response [1]` alternative of Q.1218, which TS 29.078 does not have: in CAP
+  `ReceivedInformationArg` is `CHOICE { digitsResponse [0] Digits }` (clause
+  6.2). The type here keeps that one alternative, `DigitsResponse`, with the
+  same octets as before (`80 03 00 21 43`), and a result under `[1]` is still
+  refused. It is no longer interchangeable with the `inap` type of that name.
+- `types::CalledPartyNumber`, `CallingPartyNumber` and `Cause` are unchanged:
+  aliases of `OctetString` in both versions of `inap`.
+- The test harness and the integration bench build their TCAP framing with
+  `tcap` 2 (a dev-dependency, not part of the published crate).
+
 ## [2.0.0]
 
 Wire-format corrections. Until this release the suite tested encode against

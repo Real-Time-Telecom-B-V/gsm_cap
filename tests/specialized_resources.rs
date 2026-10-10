@@ -339,6 +339,16 @@ fn prompt_and_collect_result_carries_the_digits() {
 }
 
 #[test]
+fn prompt_and_collect_result_has_no_ia5_response() {
+    // Q.1218 gives ReceivedInformationArg a second alternative, `iA5Response
+    // [1] IA5String`. TS 29.078 clause 6.2 does not have it: the CHOICE has
+    // `digitsResponse [0]` alone. `81 03 31 32 33` is "123" under `[1]`, a
+    // valid Q.1218 result and not a CAP one.
+    let refused = gsm_cap::decode::<PromptAndCollectUserInformationRes>(&vector("81 03 31 32 33"));
+    assert!(refused.is_err(), "decoded as {refused:?}");
+}
+
+#[test]
 fn explicit_wrappers_are_always_emitted_constructed() {
     // What this crate emitted before 2.0.0: the CHOICE-typed members as
     // primitive `80`, with the inner encoding as opaque content. X.690 8.14.2

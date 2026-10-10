@@ -1,6 +1,6 @@
 [package]
 name = "gsm_cap"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
 rust-version = "1.80"
 description = "CAMEL Application Part (CAP) codec (3GPP TS 29.078) — BER encode/decode of the gsmSSF-gsmSCF operations + application contexts"
@@ -26,12 +26,13 @@ crate-type = ["cdylib", "rlib"]
 rasn = "0.28"
 thiserror = "2"
 
-# Home of the leaf types that are identical in INAP and CAP: MonitorMode, the
-# PromptAndCollectUserInformation result, and the CalledPartyNumber /
-# CallingPartyNumber / Cause aliases. gsm_cap re-exports those. Everything CAP
-# defines differently (event types, BCSM events, leg identifiers, the
-# specialised resource arguments) is defined in this crate from TS 29.078.
-inap = "1"
+# Home of the leaf types that are identical in INAP and CAP: MonitorMode and the
+# CalledPartyNumber / CallingPartyNumber / Cause aliases. gsm_cap re-exports
+# those. Everything CAP defines differently (event types, BCSM events, leg
+# identifiers, the specialised resource arguments and the
+# PromptAndCollectUserInformation result) is defined in this crate from
+# TS 29.078.
+inap = "2"
 
 # Optional Python bindings (feature = "python"). Kept out of the default build so
 # `cargo add gsm_cap` and crates.io consumers pull ZERO pyo3. pyo3 >= 0.28 defaults
@@ -56,7 +57,7 @@ criterion = "0.8"
 # Sibling SS7 codecs, used ONLY by benches/integration.rs and the Wireshark
 # harness in tests/common to assemble a realistic full CAMEL stack message (CAP
 # arg → TCAP component/transaction → SCCP UDT). Not part of the published crate.
-tcap = "1"
+tcap = "2"
 sccp = "1"
 
 [[bench]]

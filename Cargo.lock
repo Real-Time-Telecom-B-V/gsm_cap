@@ -266,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "gsm_cap"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "criterion",
  "hex",
@@ -303,9 +303,9 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "inap"
-version = "1.1.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d377252b44d8202a736736b49896653055903646d14c33bec33824af01476729"
+checksum = "ad9e33756e8b519cb21a2900ea28fff7745edada59b2c64cdc1b6d7ffd47f58d"
 dependencies = [
  "rasn",
  "thiserror",
@@ -774,9 +774,9 @@ checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
 
 [[package]]
 name = "tcap"
-version = "1.0.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b0b3ae9ef7e1f435857ee51059c1db6a30f512b450ad232bf63e4ad84b3090a"
+checksum = "2487e2dd5c81e55c4fb7f4d4ce8b8a4024c20e8e4069e9fa99c48e5634952cdc"
 dependencies = [
  "hex",
  "rasn",
