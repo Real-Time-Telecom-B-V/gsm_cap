@@ -589,10 +589,22 @@ impl PromptAndCollectUserInformationArg {
     }
 }
 
-/// The result of PromptAndCollectUserInformation, `ReceivedInformationArg ::=
-/// CHOICE { digitsResponse [0] Digits }`. Identical in INAP, re-exported from
-/// the `inap` crate.
-pub use inap::operations::PromptAndCollectUserInformationRes;
+/// The result of PromptAndCollectUserInformation, `ReceivedInformationArg`.
+///
+/// ```text
+/// ReceivedInformationArg ::= CHOICE {
+///     digitsResponse [0] Digits }
+/// ```
+///
+/// Defined here and not taken from the `inap` crate: Q.1218 has a second
+/// alternative, `iA5Response [1] IA5String`, which TS 29.078 does not, so an
+/// INAP result is not always a CAP one.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum PromptAndCollectUserInformationRes {
+    #[rasn(tag(context, 0))]
+    DigitsResponse(Digits),
+}
 
 // ── CAMEL control of SMS (phase 3 onward) ───────────────────────────────────
 
