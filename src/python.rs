@@ -40,9 +40,10 @@ use crate::operations::{
 };
 use crate::types::{
     AudibleIndicator, BcsmEvent, CamelAChBillingChargingCharacteristics,
-    CamelAChBillingChargingCharacteristicsV3, DpSpecificCriteria, EventTypeBcsm, EventTypeSms,
-    LegId, MessageType, MiscCallInfo, MonitorMode, ReceivingSideId, SendingSideId,
-    TimeDurationCharging, TimeDurationChargingV3,
+    CamelAChBillingChargingCharacteristicsV2, CamelAChBillingChargingCharacteristicsV3,
+    DpSpecificCriteria, EventTypeBcsm, EventTypeSms, LegId, MessageType, MiscCallInfo, MonitorMode,
+    ReceivingSideId, ReleaseIfDurationExceeded, SendingSideId, TimeDurationCharging,
+    TimeDurationChargingV2, TimeDurationChargingV3,
 };
 use crate::CapError;
 
@@ -760,9 +761,13 @@ impl PyApplyChargingArg {
     /// Build the argument for time-duration charging.
     ///
     /// `max_call_period_duration` is in 100 ms units. `tone` asks for the
-    /// warning tone before the period ends. `cap_version` picks the encoding
-    /// of that request, which differs between the phases: 3 gives
+    /// warning tone before the period ends. `cap_version` picks the encoding,
+    /// which differs between the phases: 2 gives `releaseIfdurationExceeded
+    /// [1]` as a SEQUENCE holding the tone, 3 gives a BOOLEAN there and
     /// `tone [3] BOOLEAN`, 4 gives `audibleIndicator [3]`.
+    ///
+    /// In phase 2 the tone is part of the request to release, so `tone`
+    /// without `release_if_duration_exceeded=True` is a `ValueError`.
     #[staticmethod]
     #[pyo3(signature = (
         max_call_period_duration,
@@ -781,33 +786,55 @@ impl PyApplyChargingArg {
         tone: Option<bool>,
         party_to_charge: Option<Vec<u8>>,
     ) -> PyResult<Self> {
-        let characteristics =
-            match cap_version {
-                ac::CAP_V3 => crate::encode(
-                    &CamelAChBillingChargingCharacteristicsV3::TimeDurationCharging(
-                        TimeDurationChargingV3 {
-                            release_if_duration_exceeded,
+        let characteristics = match cap_version {
+            ac::CAP_V2 => {
+                let release = release_if_duration_exceeded.unwrap_or(false);
+                if tone.is_some() && !release {
+                    return Err(PyValueError::new_err(
+                        "in phase 2 the tone belongs to releaseIfdurationExceeded: \
+                             pass release_if_duration_exceeded=True with tone",
+                    ));
+                }
+                crate::encode(
+                    &CamelAChBillingChargingCharacteristicsV2::TimeDurationCharging(
+                        TimeDurationChargingV2 {
+                            release_if_duration_exceeded: release.then_some(
+                                ReleaseIfDurationExceeded {
+                                    tone,
+                                    extensions: None,
+                                },
+                            ),
                             tariff_switch_interval,
-                            tone,
-                            ..TimeDurationChargingV3::new(max_call_period_duration)
+                            ..TimeDurationChargingV2::new(max_call_period_duration)
                         },
                     ),
-                ),
-                ac::CAP_V4 => crate::encode(
-                    &CamelAChBillingChargingCharacteristics::TimeDurationCharging(
-                        TimeDurationCharging {
-                            release_if_duration_exceeded,
-                            tariff_switch_interval,
-                            audible_indicator: tone.map(AudibleIndicator::Tone),
-                            ..TimeDurationCharging::new(max_call_period_duration)
-                        },
-                    ),
-                ),
-                _ => return Err(PyValueError::new_err(
-                    "cap_version is 3 or 4: the charging characteristics differ between the phases",
-                )),
+                )
             }
-            .map_err(cap_err)?;
+            ac::CAP_V3 => crate::encode(
+                &CamelAChBillingChargingCharacteristicsV3::TimeDurationCharging(
+                    TimeDurationChargingV3 {
+                        release_if_duration_exceeded,
+                        tariff_switch_interval,
+                        tone,
+                        ..TimeDurationChargingV3::new(max_call_period_duration)
+                    },
+                ),
+            ),
+            ac::CAP_V4 => crate::encode(
+                &CamelAChBillingChargingCharacteristics::TimeDurationCharging(
+                    TimeDurationCharging {
+                        release_if_duration_exceeded,
+                        tariff_switch_interval,
+                        audible_indicator: tone.map(AudibleIndicator::Tone),
+                        ..TimeDurationCharging::new(max_call_period_duration)
+                    },
+                ),
+            ),
+            _ => return Err(PyValueError::new_err(
+                "cap_version is 2, 3 or 4: the charging characteristics differ between the phases",
+            )),
+        }
+        .map_err(cap_err)?;
         Ok(Self {
             ach_billing_charging_characteristics: characteristics,
             party_to_charge,

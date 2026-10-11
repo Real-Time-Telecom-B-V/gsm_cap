@@ -62,8 +62,9 @@ plus the [`op_codes`](src/op_codes.rs) with `operation_name()` and the
 
 Every argument is modelled with all the members the ASN.1 gives it through
 Release 18. The charging operations carry an OCTET STRING whose content is
-itself BER; the types for that content are here too, in the phase 3 and the
-phase 4 form where the two differ.
+itself BER; the types for that content are here too, in the phase 2, the
+phase 3 and the phase 4 form where they differ (the ApplyCharging
+characteristics: GSM 09.78 V7.1.0, TS 29.078 V3.16.0 and V18.0.0).
 
 Not covered yet: ContinueWithArgument, ResetTimer, EstablishTemporaryConnection,
 DisconnectForwardConnection (with and without argument), AssistRequestInstructions,

@@ -197,8 +197,52 @@ def test_apply_charging_time_duration_differs_between_phases() -> None:
     assert v4.ach_billing_charging_characteristics == bytes.fromhex(
         "a00980020bb8a3030101ff"
     )
+    # Phase 1 has no ApplyCharging.
     with pytest.raises(ValueError):
-        gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=2)
+        gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=1)
+
+
+def test_apply_charging_time_duration_phase_2() -> None:
+    # GSM 09.78 V7.1.0: releaseIfdurationExceeded [1] is a SEQUENCE holding
+    # `tone BOOLEAN DEFAULT FALSE`, and there is no member [3].
+    def content(**kwargs) -> bytes:
+        arg = gsm_cap.ApplyChargingArg.time_duration(3000, cap_version=2, **kwargs)
+        return arg.ach_billing_charging_characteristics
+
+    assert content() == bytes.fromhex("a00480020bb8")
+    assert content(release_if_duration_exceeded=False) == bytes.fromhex("a00480020bb8")
+    # Release, tone left at its default: an empty SEQUENCE.
+    assert content(release_if_duration_exceeded=True) == bytes.fromhex(
+        "a00680020bb8a100"
+    )
+    assert content(release_if_duration_exceeded=True, tone=True) == bytes.fromhex(
+        "a00980020bb8a1030101ff"
+    )
+    assert content(release_if_duration_exceeded=True, tone=False) == bytes.fromhex(
+        "a00980020bb8a103010100"
+    )
+    assert content(
+        release_if_duration_exceeded=True, tone=True, tariff_switch_interval=300
+    ) == bytes.fromhex("a00d80020bb8a1030101ff8202012c")
+    assert content(tariff_switch_interval=300) == bytes.fromhex(
+        "a00880020bb88202012c"
+    )
+
+    # The whole argument, with the leg.
+    arg = gsm_cap.ApplyChargingArg.time_duration(
+        3000,
+        cap_version=2,
+        release_if_duration_exceeded=True,
+        tone=True,
+        party_to_charge=bytes([0x01]),
+    )
+    assert arg.encode() == bytes.fromhex("3012800ba00980020bb8a1030101ffa203800101")
+
+    # In phase 2 a tone cannot be asked for without the release.
+    with pytest.raises(ValueError):
+        content(tone=True)
+    with pytest.raises(ValueError):
+        content(release_if_duration_exceeded=False, tone=True)
 
 
 def test_initial_dp_sms_round_trip() -> None:

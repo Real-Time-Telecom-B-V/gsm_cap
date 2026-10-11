@@ -5,6 +5,35 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
+## [3.1.0] - 2026-10-11
+
+### Added
+
+- **The CAMEL phase 2 form of the ApplyCharging characteristics**, so that a
+  gsmSCF can grant a call period on a CAP v2 dialogue:
+  `types::CamelAChBillingChargingCharacteristicsV2`, `TimeDurationChargingV2`
+  and `ReleaseIfDurationExceeded`, from GSM 09.78 V7.1.0 (ETSI TS 101 046)
+  clause 6.3. In phase 2 `releaseIfdurationExceeded [1]` is a SEQUENCE that
+  holds `tone BOOLEAN DEFAULT FALSE` and optional extensions (`A1 03 01 01 FF`);
+  phase 3 and phase 4 have a BOOLEAN there (`81 01 FF`) and the tone in `[3]`.
+  None of the three forms reads another. Use them with
+  `ApplyChargingArg::with_characteristics` and `characteristics::<T>()` as the
+  other two.
+- Python: `ApplyChargingArg.time_duration(.., cap_version=2)`. The tone is part
+  of the release request in phase 2, so `tone` without
+  `release_if_duration_exceeded=True` raises `ValueError`. `cap_version=2` used
+  to raise `ValueError`.
+
+Checked against hand-assembled vectors and against Wireshark on the
+`CAP-v2-gsmSSF-to-gsmSCF-AC` application context. The phase 2 CAMEL-CallResult
+(`partyToCharge`, `timeInformation`, `callActive`) is the first three members of
+`TimeDurationChargingResult` with the same tags, so ApplyChargingReport needs no
+type of its own; a test now pins that.
+
+Not done here: `InitialDPArgExtension` and `ConnectArg` member `[57]` also
+differ in phase 2 (`naCarrierInformation [0]`, `gmscAddress [1]`; `na-Info
+[57]`) and are still modelled in their later form only.
+
 ## [3.0.0] - 2026-10-10
 
 The `inap` dependency moves from 1 to 2, so that a consumer on `inap` 2 no
