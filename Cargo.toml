@@ -23,7 +23,7 @@ exclude = [".github/", "docs/", "scripts/", "python/tests/"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-rasn = "0.28"
+rasn = "0.29"
 thiserror = "2"
 
 # Home of the leaf types that are identical in INAP and CAP: MonitorMode and the
