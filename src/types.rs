@@ -1023,6 +1023,53 @@ pub enum CamelFciBillingChargingCharacteristics {
     FciBccCamelSequence1(FciBccCamelSequence1),
 }
 
+// ── Call information and timers ─────────────────────────────────────────────
+
+/// RequestedInformationType: what a CallInformationRequest asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum RequestedInformationType {
+    CallAttemptElapsedTime = 0,
+    CallStopTime = 1,
+    CallConnectedElapsedTime = 2,
+    ReleaseCause = 30,
+}
+
+/// RequestedInformationValue. A CHOICE, so the `[1]` member that holds it is
+/// EXPLICIT.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum RequestedInformationValue {
+    /// Seconds, `INTEGER (0..255)`.
+    #[rasn(tag(context, 0))]
+    CallAttemptElapsedTimeValue(u8),
+    /// DateAndTime, seven octets of BCD (YYYYMMDDHHMMSS, swapped nibbles).
+    #[rasn(tag(context, 1))]
+    CallStopTimeValue(OctetString),
+    /// Units of 100 ms, `Integer4`.
+    #[rasn(tag(context, 2))]
+    CallConnectedElapsedTimeValue(u32),
+    /// Cause (Q.850).
+    #[rasn(tag(context, 30))]
+    ReleaseCauseValue(Cause),
+}
+
+/// RequestedInformation: one item of a CallInformationReport.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct RequestedInformation {
+    #[rasn(tag(context, 0))]
+    pub requested_information_type: RequestedInformationType,
+    #[rasn(tag(explicit(context, 1)))]
+    pub requested_information_value: RequestedInformationValue,
+}
+
+/// TimerID: the gsmSSF timer a ResetTimer refreshes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(enumerated)]
+pub enum TimerId {
+    Tssf = 0,
+}
+
 // ── Specialised resources ───────────────────────────────────────────────────
 
 /// VariablePart: one value spoken inside a variable announcement.

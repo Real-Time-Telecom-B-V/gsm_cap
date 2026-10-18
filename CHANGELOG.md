@@ -5,6 +5,20 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
+## [Unreleased]
+
+### Added
+
+- `EstablishTemporaryConnectionArg` (op 17), `ResetTimerArg` (op 33),
+  `CallInformationRequestArg` (op 45) and `CallInformationReportArg` (op 44),
+  with `RequestedInformation`, `RequestedInformationType`,
+  `RequestedInformationValue` and `TimerId`, per TS 29.078 V18.0.0 clause
+  6.1.1. Hand-assembled vectors and Wireshark field checks for each.
+- Operation codes `ESTABLISH_TEMPORARY_CONNECTION` (17),
+  `DISCONNECT_FORWARD_CONNECTION` (18, no argument), `RESET_TIMER` (33),
+  `CALL_INFORMATION_REPORT` (44) and `CALL_INFORMATION_REQUEST` (45), named in
+  `operation_name`.
+
 ## [3.0.0] - 2026-10-10
 
 The `inap` dependency moves from 1 to 2, so that a consumer on `inap` 2 no
