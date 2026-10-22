@@ -5,10 +5,19 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
-## [3.1.0] - 2026-10-11
+## [4.0.0] - 2026-10-22
 
 ### Added
 
+- `EstablishTemporaryConnectionArg` (op 17), `ResetTimerArg` (op 33),
+  `CallInformationRequestArg` (op 45) and `CallInformationReportArg` (op 44),
+  with `RequestedInformation`, `RequestedInformationType`,
+  `RequestedInformationValue` and `TimerId`, per TS 29.078 V18.0.0 clause
+  6.1.1. Hand-assembled vectors and Wireshark field checks for each.
+- Operation codes `ESTABLISH_TEMPORARY_CONNECTION` (17),
+  `DISCONNECT_FORWARD_CONNECTION` (18, no argument), `RESET_TIMER` (33),
+  `CALL_INFORMATION_REPORT` (44) and `CALL_INFORMATION_REQUEST` (45), named in
+  `operation_name`.
 - **The CAMEL phase 2 form of the ApplyCharging characteristics**, so that a
   gsmSCF can grant a call period on a CAP v2 dialogue:
   `types::CamelAChBillingChargingCharacteristicsV2`, `TimeDurationChargingV2`
@@ -33,6 +42,14 @@ type of its own; a test now pins that.
 Not done here: `InitialDPArgExtension` and `ConnectArg` member `[57]` also
 differ in phase 2 (`naCarrierInformation [0]`, `gmscAddress [1]`; `na-Info
 [57]`) and are still modelled in their later form only.
+
+### Changed
+- **`rasn` 0.29** (was 0.28), **`tcap` 3** and **`inap` 3**. `rasn`, `tcap`
+  and `inap` types are in the public API, so a caller moves with this release.
+- rasn 0.29 refuses an explicitly tagged CHOICE member it cannot read, where
+  0.28 reported it absent. `decode` already failed on those; the error now
+  comes from rasn and names the type (`No valid choice for ReceivingSideId`).
+  The structural guard in `strict` stays.
 
 ## [3.0.0] - 2026-10-10
 

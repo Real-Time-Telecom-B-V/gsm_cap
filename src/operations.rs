@@ -14,8 +14,8 @@
 //! sends. Each argument with a mandatory member has a `new` that leaves the
 //! optional ones absent.
 //!
-//! `continue` (31), `activityTest` (55) and `continueSMS` (65) have no
-//! argument and so no type here.
+//! `continue` (31), `disconnectForwardConnection` (18), `activityTest` (55)
+//! and `continueSMS` (65) have no argument and so no type here.
 
 use rasn::prelude::*;
 
@@ -464,6 +464,110 @@ impl FurnishChargingInformationArg {
     }
 }
 
+// ── Call information and timers ─────────────────────────────────────────────
+
+/// CallInformationRequest (op 45): the gsmSCF asks the gsmSSF to report call
+/// information for a leg when the call or the leg ends.
+///
+/// ```text
+/// CallInformationRequestArg ::= SEQUENCE {
+///   requestedInformationTypeList [0] RequestedInformationTypeList,
+///   extensions                   [2] Extensions OPTIONAL,
+///   legID                        [3] SendingSideID DEFAULT sendingSideID:leg2,   -- explicit
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct CallInformationRequestArg {
+    #[rasn(tag(context, 0))]
+    pub requested_information_type_list: SequenceOf<RequestedInformationType>,
+    #[rasn(tag(context, 2))]
+    pub extensions: Option<Extensions>,
+    /// `DEFAULT sendingSideID:leg2`.
+    #[rasn(tag(explicit(context, 3)))]
+    pub leg_id: Option<SendingSideId>,
+}
+
+impl CallInformationRequestArg {
+    /// A request for `types` on the default leg (leg 2).
+    pub fn new(types: Vec<RequestedInformationType>) -> Self {
+        Self {
+            requested_information_type_list: types,
+            extensions: None,
+            leg_id: None,
+        }
+    }
+}
+
+/// CallInformationReport (op 44): the gsmSSF reports the requested call
+/// information.
+///
+/// ```text
+/// CallInformationReportArg ::= SEQUENCE {
+///   requestedInformationList [0] RequestedInformationList,
+///   extensions               [2] Extensions OPTIONAL,
+///   legID                    [3] ReceivingSideID DEFAULT receivingSideID:leg2,   -- explicit
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct CallInformationReportArg {
+    #[rasn(tag(context, 0))]
+    pub requested_information_list: SequenceOf<RequestedInformation>,
+    #[rasn(tag(context, 2))]
+    pub extensions: Option<Extensions>,
+    /// `DEFAULT receivingSideID:leg2`.
+    #[rasn(tag(explicit(context, 3)))]
+    pub leg_id: Option<ReceivingSideId>,
+}
+
+impl CallInformationReportArg {
+    /// A report of `items` for the default leg (leg 2).
+    pub fn new(items: Vec<RequestedInformation>) -> Self {
+        Self {
+            requested_information_list: items,
+            extensions: None,
+            leg_id: None,
+        }
+    }
+}
+
+/// ResetTimer (op 33): the gsmSCF refreshes a gsmSSF timer (Tssf), for
+/// instance while it waits for an online charging answer.
+///
+/// ```text
+/// ResetTimerArg ::= SEQUENCE {
+///   timerID       [0] TimerID DEFAULT tssf,
+///   timervalue    [1] TimerValue,
+///   extensions    [2] Extensions OPTIONAL,
+///   callSegmentID [3] CallSegmentID OPTIONAL,
+///   ...}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct ResetTimerArg {
+    /// `DEFAULT tssf`.
+    #[rasn(tag(context, 0))]
+    pub timer_id: Option<TimerId>,
+    /// Seconds, `Integer4`.
+    #[rasn(tag(context, 1))]
+    pub timervalue: u32,
+    #[rasn(tag(context, 2))]
+    pub extensions: Option<Extensions>,
+    /// Phase 4.
+    #[rasn(tag(context, 3))]
+    pub call_segment_id: Option<u8>,
+}
+
+impl ResetTimerArg {
+    /// Reset Tssf (the default timer) to `seconds`.
+    pub fn new(seconds: u32) -> Self {
+        Self {
+            timer_id: None,
+            timervalue: seconds,
+            extensions: None,
+            call_segment_id: None,
+        }
+    }
+}
+
 // ── Specialised resources ───────────────────────────────────────────────────
 
 /// ConnectToResource (op 19): the gsmSCF connects the call to a gsmSRF.
@@ -608,6 +712,72 @@ impl PromptAndCollectUserInformationArg {
 pub enum PromptAndCollectUserInformationRes {
     #[rasn(tag(context, 0))]
     DigitsResponse(Digits),
+}
+
+/// EstablishTemporaryConnection (op 17): the gsmSCF has the gsmSSF set up a
+/// temporary connection to an assisting SSF or an IP (gsmSRF).
+///
+/// ```text
+/// EstablishTemporaryConnectionArg ::= SEQUENCE {
+///   assistingSSPIPRoutingAddress    [0]  AssistingSSPIPRoutingAddress,
+///   correlationID                   [1]  CorrelationID OPTIONAL,
+///   scfID                           [3]  ScfID OPTIONAL,
+///   extensions                      [4]  Extensions OPTIONAL,
+///   carrier                         [5]  Carrier OPTIONAL,
+///   serviceInteractionIndicatorsTwo [6]  ServiceInteractionIndicatorsTwo OPTIONAL,
+///   callSegmentID                   [7]  CallSegmentID OPTIONAL,
+///   naOliInfo                       [50] NAOliInfo OPTIONAL,
+///   chargeNumber                    [51] ChargeNumber OPTIONAL,
+///   ...,
+///   originalCalledPartyID           [52] OriginalCalledPartyID OPTIONAL,
+///   callingPartyNumber              [53] CallingPartyNumber OPTIONAL}
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct EstablishTemporaryConnectionArg {
+    /// Digits (Q.763 generic number format).
+    #[rasn(tag(context, 0))]
+    pub assisting_ssp_ip_routing_address: Digits,
+    /// Digits (Q.763 generic digits format).
+    #[rasn(tag(context, 1))]
+    pub correlation_id: Option<Digits>,
+    #[rasn(tag(context, 3))]
+    pub scf_id: Option<OctetString>,
+    #[rasn(tag(context, 4))]
+    pub extensions: Option<Extensions>,
+    #[rasn(tag(context, 5))]
+    pub carrier: Option<Carrier>,
+    #[rasn(tag(context, 6))]
+    pub service_interaction_indicators_two: Option<ServiceInteractionIndicatorsTwo>,
+    /// Phase 4.
+    #[rasn(tag(context, 7))]
+    pub call_segment_id: Option<u8>,
+    #[rasn(tag(context, 50))]
+    pub na_oli_info: Option<NaOliInfo>,
+    #[rasn(tag(context, 51))]
+    pub charge_number: Option<ChargeNumber>,
+    #[rasn(tag(context, 52))]
+    pub original_called_party_id: Option<OriginalCalledPartyId>,
+    #[rasn(tag(context, 53))]
+    pub calling_party_number: Option<CallingPartyNumber>,
+}
+
+impl EstablishTemporaryConnectionArg {
+    /// A temporary connection to `address` with every optional member absent.
+    pub fn new(address: Digits) -> Self {
+        Self {
+            assisting_ssp_ip_routing_address: address,
+            correlation_id: None,
+            scf_id: None,
+            extensions: None,
+            carrier: None,
+            service_interaction_indicators_two: None,
+            call_segment_id: None,
+            na_oli_info: None,
+            charge_number: None,
+            original_called_party_id: None,
+            calling_party_number: None,
+        }
+    }
 }
 
 // ── CAMEL control of SMS (phase 3 onward) ───────────────────────────────────
