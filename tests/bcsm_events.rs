@@ -772,15 +772,12 @@ fn event_report_rejects_the_tags_this_crate_used_to_emit() {
 fn event_report_with_an_unreadable_leg_is_an_error_not_a_missing_leg() {
     // legID [3] is ReceivingSideID, whose only alternative is [1]. A peer that
     // puts sendingSideID [0] there sent something this type cannot hold.
-    // rasn alone answers Ok with leg_id None, having consumed the member.
+    // rasn 0.28 alone answered Ok with leg_id None, having consumed the
+    // member; 0.29 refuses it too.
     let wrong_alternative = vector("30 08 80 01 07 a3 03 80 01 02");
-    assert!(
-        rasn::ber::decode::<EventReportBcsmArg>(&wrong_alternative)
-            .is_ok_and(|arg| arg.leg_id.is_none()),
-        "the upstream behaviour this crate guards against has changed, revisit src/strict.rs"
-    );
+    assert!(rasn::ber::decode::<EventReportBcsmArg>(&wrong_alternative).is_err());
     let error = gsm_cap::decode::<EventReportBcsmArg>(&wrong_alternative).unwrap_err();
-    assert!(error.to_string().contains("[3]"), "{error}");
+    assert!(error.to_string().contains("ReceivingSideId"), "{error}");
 
     // Same for an event-specific information alternative that does not exist.
     let unknown_alternative = vector("30 0a 80 01 07 a2 05 bf 63 02 80 00");

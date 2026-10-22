@@ -8,7 +8,9 @@
 //! tagged (`legID`, `partyToCharge`, `eventSpecificInformationBCSM`, ...), so
 //! a peer that sends one of those with content this crate cannot read would
 //! get a successful decode with the member silently gone. A gsmSCF would then
-//! act on a report that has lost its leg, or its cause.
+//! act on a report that has lost its leg, or its cause. `rasn` 0.29 no longer
+//! does this; the guard stays, since it does not depend on how `rasn` handles
+//! any one construct.
 //!
 //! The guard is structural and does not depend on which type is decoded: the
 //! decoded value is encoded again, and the two encodings are walked side by
