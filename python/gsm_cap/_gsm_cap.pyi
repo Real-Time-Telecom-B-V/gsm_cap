@@ -203,10 +203,13 @@ class ApplyChargingArg:
         tone: Optional[bool] = ...,
         party_to_charge: Optional[bytes] = ...,
     ) -> ApplyChargingArg:
-        """Time-duration charging for a CAP phase 3 or phase 4 dialogue.
+        """Time-duration charging for a CAP phase 2, 3 or 4 dialogue.
 
-        ``max_call_period_duration`` is in 100 ms units. The warning tone is
-        encoded differently in the two phases, hence ``cap_version``.
+        ``max_call_period_duration`` is in 100 ms units. The release request
+        and the warning tone are encoded differently in each phase, hence
+        ``cap_version``. In phase 2 the tone is part of the release request:
+        ``tone`` without ``release_if_duration_exceeded=True`` raises
+        ``ValueError``.
         """
     def encode(self) -> bytes: ...
     @classmethod

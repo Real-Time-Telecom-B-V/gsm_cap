@@ -374,9 +374,12 @@ impl EventReportBcsmArg {
 /// encoding of a CAMEL-AChBillingChargingCharacteristics value. Build it with
 /// [`ApplyChargingArg::with_characteristics`] from
 /// [`CamelAChBillingChargingCharacteristics`](crate::types::CamelAChBillingChargingCharacteristics)
-/// on a phase 4 dialogue or
+/// on a phase 4 dialogue,
 /// [`CamelAChBillingChargingCharacteristicsV3`](crate::types::CamelAChBillingChargingCharacteristicsV3)
-/// on a phase 3 one: the two differ on the wire.
+/// on a phase 3 one or
+/// [`CamelAChBillingChargingCharacteristicsV2`](crate::types::CamelAChBillingChargingCharacteristicsV2)
+/// on a phase 2 one: the three differ on the wire. Phase 2 has no
+/// `aChChargingAddress`.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 pub struct ApplyChargingArg {
     #[rasn(tag(context, 0))]
@@ -407,7 +410,8 @@ impl ApplyChargingArg {
         Ok(Self::new(crate::encode(characteristics)?.into()))
     }
 
-    /// Decode the characteristics as `T`, the phase 3 or the phase 4 type.
+    /// Decode the characteristics as `T`, the phase 2, the phase 3 or the
+    /// phase 4 type.
     pub fn characteristics<T: rasn::Decode + rasn::Encode>(&self) -> Result<T, CapError> {
         crate::decode(&self.ach_billing_charging_characteristics)
     }

@@ -917,6 +917,90 @@ pub enum CamelAChBillingChargingCharacteristicsV3 {
     TimeDurationCharging(TimeDurationChargingV3),
 }
 
+/// ReleaseIfDurationExceeded (phase 2): release the call when the granted
+/// period ends, with or without a warning tone before it does.
+///
+/// ```text
+/// ReleaseIfDurationExceeded ::= SEQUENCE {
+///   tone       BOOLEAN DEFAULT FALSE,
+///   ...,
+///   extensions [10] SEQUENCE SIZE(1..numOfExtensions) OF ExtensionField OPTIONAL }
+/// ```
+///
+/// That the member is present at all is the request to release; an empty
+/// SEQUENCE (`A1 00` inside `timeDurationCharging`) releases without a tone.
+#[derive(Debug, Clone, Default, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct ReleaseIfDurationExceeded {
+    /// `DEFAULT FALSE`. No context tag: a universal BOOLEAN. `None` leaves
+    /// the member out, `Some(false)` writes the default out (`01 01 00`),
+    /// which BER allows and a peer may send. Read it with
+    /// [`ReleaseIfDurationExceeded::tone`].
+    pub tone: Option<bool>,
+    #[rasn(tag(context, 10))]
+    pub extensions: Option<Extensions>,
+}
+
+impl ReleaseIfDurationExceeded {
+    /// Release with a warning tone before the period ends.
+    pub fn with_tone() -> Self {
+        Self {
+            tone: Some(true),
+            extensions: None,
+        }
+    }
+
+    /// Whether the warning tone is asked for: the member, or its default
+    /// FALSE when it is left out.
+    pub fn tone(&self) -> bool {
+        self.tone.unwrap_or(false)
+    }
+}
+
+/// The `timeDurationCharging` of CAMEL-AChBillingChargingCharacteristics as
+/// phase 2 defines it (GSM 09.78 Release 1997 and Release 1998, ETSI
+/// TS 101 046 clause 6.3).
+///
+/// Member `[1]` is not the one of the later phases and the forms are not
+/// compatible on the wire: phase 2 has `releaseIfdurationExceeded [1]
+/// ReleaseIfDurationExceeded`, a SEQUENCE that holds the tone (`A1 03 01 01
+/// FF`); phase 3 and phase 4 have `releaseIfdurationExceeded [1] BOOLEAN`
+/// (`81 01 FF`) and the tone in `[3]`. Send the form that matches the
+/// application context of the dialogue.
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+pub struct TimeDurationChargingV2 {
+    /// In 100 ms units, INTEGER (1..864000).
+    #[rasn(tag(context, 0))]
+    pub max_call_period_duration: u32,
+    /// Present: release the call when the period ends. Absent: report and
+    /// leave the call up.
+    #[rasn(tag(context, 1))]
+    pub release_if_duration_exceeded: Option<ReleaseIfDurationExceeded>,
+    /// In seconds, INTEGER (1..86400).
+    #[rasn(tag(context, 2))]
+    pub tariff_switch_interval: Option<u32>,
+}
+
+impl TimeDurationChargingV2 {
+    /// A call period of `max_call_period_duration` (100 ms units) with every
+    /// optional member absent.
+    pub fn new(max_call_period_duration: u32) -> Self {
+        Self {
+            max_call_period_duration,
+            release_if_duration_exceeded: None,
+            tariff_switch_interval: None,
+        }
+    }
+}
+
+/// CAMEL-AChBillingChargingCharacteristics, phase 2 (GSM 09.78 Release 1997
+/// and Release 1998). See [`TimeDurationChargingV2`].
+#[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
+#[rasn(choice)]
+pub enum CamelAChBillingChargingCharacteristicsV2 {
+    #[rasn(tag(context, 0))]
+    TimeDurationCharging(TimeDurationChargingV2),
+}
+
 /// AChChargingAddress (phase 4): the leg or the gsmSRF connection charged.
 #[derive(Debug, Clone, PartialEq, Eq, AsnType, Decode, Encode)]
 #[rasn(choice)]
