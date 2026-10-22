@@ -5,6 +5,16 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
+## [4.0.0] - 2026-10-22
+
+### Changed
+- **`rasn` 0.29** (was 0.28), **`tcap` 3** and **`inap` 3**. `rasn`, `tcap`
+  and `inap` types are in the public API, so a caller moves with this release.
+- rasn 0.29 refuses an explicitly tagged CHOICE member it cannot read, where
+  0.28 reported it absent. `decode` already failed on those; the error now
+  comes from rasn and names the type (`No valid choice for ReceivingSideId`).
+  The structural guard in `strict` stays.
+
 ## [3.0.0] - 2026-10-10
 
 The `inap` dependency moves from 1 to 2, so that a consumer on `inap` 2 no
