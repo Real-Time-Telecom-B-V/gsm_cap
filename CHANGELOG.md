@@ -7,6 +7,18 @@ All notable changes are documented here. The format follows
 
 ## [4.0.0] - 2026-10-22
 
+### Added
+
+- `EstablishTemporaryConnectionArg` (op 17), `ResetTimerArg` (op 33),
+  `CallInformationRequestArg` (op 45) and `CallInformationReportArg` (op 44),
+  with `RequestedInformation`, `RequestedInformationType`,
+  `RequestedInformationValue` and `TimerId`, per TS 29.078 V18.0.0 clause
+  6.1.1. Hand-assembled vectors and Wireshark field checks for each.
+- Operation codes `ESTABLISH_TEMPORARY_CONNECTION` (17),
+  `DISCONNECT_FORWARD_CONNECTION` (18, no argument), `RESET_TIMER` (33),
+  `CALL_INFORMATION_REPORT` (44) and `CALL_INFORMATION_REQUEST` (45), named in
+  `operation_name`.
+
 ### Changed
 - **`rasn` 0.29** (was 0.28), **`tcap` 3** and **`inap` 3**. `rasn`, `tcap`
   and `inap` types are in the public API, so a caller moves with this release.

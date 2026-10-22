@@ -9,6 +9,16 @@ use gsm_cap::op_codes;
 /// `(constant, value in clause 5.3, operation name in clause 5.3)`.
 const TABLE: &[(i64, i64, &str)] = &[
     (op_codes::INITIAL_DP, 0, "initialDP"),
+    (
+        op_codes::ESTABLISH_TEMPORARY_CONNECTION,
+        17,
+        "establishTemporaryConnection",
+    ),
+    (
+        op_codes::DISCONNECT_FORWARD_CONNECTION,
+        18,
+        "disconnectForwardConnection",
+    ),
     (op_codes::CONNECT_TO_RESOURCE, 19, "connectToResource"),
     (op_codes::CONNECT, 20, "connect"),
     (op_codes::RELEASE_CALL, 22, "releaseCall"),
@@ -19,6 +29,7 @@ const TABLE: &[(i64, i64, &str)] = &[
     ),
     (op_codes::EVENT_REPORT_BCSM, 24, "eventReportBCSM"),
     (op_codes::CONTINUE, 31, "continue"),
+    (op_codes::RESET_TIMER, 33, "resetTimer"),
     (
         op_codes::FURNISH_CHARGING_INFORMATION,
         34,
@@ -26,6 +37,16 @@ const TABLE: &[(i64, i64, &str)] = &[
     ),
     (op_codes::APPLY_CHARGING, 35, "applyCharging"),
     (op_codes::APPLY_CHARGING_REPORT, 36, "applyChargingReport"),
+    (
+        op_codes::CALL_INFORMATION_REPORT,
+        44,
+        "callInformationReport",
+    ),
+    (
+        op_codes::CALL_INFORMATION_REQUEST,
+        45,
+        "callInformationRequest",
+    ),
     (op_codes::PLAY_ANNOUNCEMENT, 47, "playAnnouncement"),
     (
         op_codes::PROMPT_AND_COLLECT_USER_INFORMATION,
