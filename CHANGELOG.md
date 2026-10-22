@@ -5,7 +5,7 @@ All notable changes are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). See
 [VERSIONING.md](VERSIONING.md) for the policy.
 
-## [Unreleased]
+## [4.0.0] - 2026-10-22
 
 ### Added
 
@@ -18,6 +18,14 @@ All notable changes are documented here. The format follows
   `DISCONNECT_FORWARD_CONNECTION` (18, no argument), `RESET_TIMER` (33),
   `CALL_INFORMATION_REPORT` (44) and `CALL_INFORMATION_REQUEST` (45), named in
   `operation_name`.
+
+### Changed
+- **`rasn` 0.29** (was 0.28), **`tcap` 3** and **`inap` 3**. `rasn`, `tcap`
+  and `inap` types are in the public API, so a caller moves with this release.
+- rasn 0.29 refuses an explicitly tagged CHOICE member it cannot read, where
+  0.28 reported it absent. `decode` already failed on those; the error now
+  comes from rasn and names the type (`No valid choice for ReceivingSideId`).
+  The structural guard in `strict` stays.
 
 ## [3.0.0] - 2026-10-10
 
